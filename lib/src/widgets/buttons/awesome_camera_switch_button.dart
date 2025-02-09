@@ -25,7 +25,7 @@ class AwesomeCameraSwitchButton extends StatelessWidget {
                 scale: scale,
               );
             }),
-        onSwitchTap = onSwitchTap ?? ((state) => state.switchCameraSensor());
+        onSwitchTap = onSwitchTap ?? ((state) => state.switchCameraSensorPosition());
 
   @override
   Widget build(BuildContext context) {
