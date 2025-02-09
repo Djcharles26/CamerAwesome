@@ -23,7 +23,7 @@ class AnalysisCameraState extends CameraState {
     if (captureMode == CaptureMode.analysis_only) {
       return;
     }
-    cameraContext.changeState(captureMode.toCameraState(cameraContext));
+    super.setState(captureMode);
   }
 
   focus() {

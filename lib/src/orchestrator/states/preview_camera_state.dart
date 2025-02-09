@@ -23,7 +23,7 @@ class PreviewCameraState extends CameraState {
     if (captureMode == CaptureMode.preview) {
       return;
     }
-    cameraContext.changeState(captureMode.toCameraState(cameraContext));
+    super.setState(captureMode);
   }
 
   focus() {

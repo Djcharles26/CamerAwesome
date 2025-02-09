@@ -25,7 +25,7 @@ class VideoCameraState extends CameraState {
     if (captureMode == CaptureMode.video) {
       return;
     }
-    cameraContext.changeState(captureMode.toCameraState(cameraContext));
+    super.setState(captureMode);
   }
 
   @override

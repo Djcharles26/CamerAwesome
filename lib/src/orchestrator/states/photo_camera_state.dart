@@ -122,7 +122,7 @@ class PhotoCameraState extends CameraState {
     if (captureMode == CaptureMode.photo) {
       return;
     }
-    cameraContext.changeState(captureMode.toCameraState(cameraContext));
+    super.setState(captureMode);
   }
 
   @override
