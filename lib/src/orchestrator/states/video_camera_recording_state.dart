@@ -97,7 +97,7 @@ class VideoRecordingCameraState extends CameraState {
       onVideoFailed?.call(Exception("Error while stop recording"));
     }
     await CamerawesomePlugin.setCaptureMode(CaptureMode.video);
-    cameraContext.changeState(VideoCameraState.from(cameraContext));
+    cameraContext.changeState<VideoCameraState>();
   }
 
   /// If video recording should [enableAudio].
