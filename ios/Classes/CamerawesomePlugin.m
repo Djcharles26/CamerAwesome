@@ -603,24 +603,6 @@ FlutterEventSink physicalButtonEventSink;
   return [PreviewSize makeWithWidth:@(previewSize.height) height:@(previewSize.width)];
 }
 
-#pragma mark - Zoom methods
-
-- (nullable NSNumber *)getMaxZoomWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  if (self.camera == nil && self.multiCamera == nil) {
-    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
-  }
-  
-  if (self.multiCamera != nil) {
-    return @([self.multiCamera getMaxZoom]);
-  } else {
-    return @([self.camera getMaxZoom]);
-  }
-}
-
-- (nullable NSNumber *)getMinZoomWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  return @(0);
-}
-
 - (void)setZoomZoom:(nonnull NSNumber *)zoom error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
   if (self.camera == nil && self.multiCamera == nil) {
     *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
