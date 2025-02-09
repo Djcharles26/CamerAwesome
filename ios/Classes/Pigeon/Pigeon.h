@@ -180,7 +180,10 @@ typedef NS_ENUM(NSUInteger, AnalysisRotation) {
     name:(NSString *)name
     iso:(NSNumber *)iso
     flashAvailable:(NSNumber *)flashAvailable
-    uid:(NSString *)uid;
+    uid:(NSString *)uid
+		minZoom:(CGFloat)minZoom
+		maxOpticalZoom:(CGFloat)maxOpticalZoom
+		maxDigitalZoom:(CGFloat)maxDigitalZoom;
 @property(nonatomic, assign) PigeonSensorType sensorType;
 /// A localized device name for display in the user interface.
 @property(nonatomic, copy) NSString * name;
@@ -190,6 +193,12 @@ typedef NS_ENUM(NSUInteger, AnalysisRotation) {
 @property(nonatomic, strong) NSNumber * flashAvailable;
 /// An identifier that uniquely identifies the device.
 @property(nonatomic, copy) NSString * uid;
+/// Min zoom factor
+@property(nonatomic, assign) CGFloat minZoom;
+/// Max optical (no distorsion) zoom factor;
+@property(nonatomic, assign) CGFloat maxOpticalZoom;
+/// Max digital (distorsion) zoom factor;
+@property(nonatomic, assign) CGFloat maxDigitalZoom;
 @end
 
 @interface AndroidFocusSettings : NSObject
@@ -301,10 +310,6 @@ NSObject<FlutterMessageCodec> *CameraInterfaceGetCodec(void);
 - (void)setMirrorFrontCameraMirror:(NSNumber *)mirror error:(FlutterError *_Nullable *_Nonnull)error;
 - (void)setSensorSensors:(NSArray<PigeonSensor *> *)sensors error:(FlutterError *_Nullable *_Nonnull)error;
 - (void)setCorrectionBrightness:(NSNumber *)brightness error:(FlutterError *_Nullable *_Nonnull)error;
-/// @return `nil` only when `error != nil`.
-- (nullable NSNumber *)getMinZoomWithError:(FlutterError *_Nullable *_Nonnull)error;
-/// @return `nil` only when `error != nil`.
-- (nullable NSNumber *)getMaxZoomWithError:(FlutterError *_Nullable *_Nonnull)error;
 - (void)setCaptureModeMode:(NSString *)mode error:(FlutterError *_Nullable *_Nonnull)error;
 - (void)setRecordingAudioModeEnableAudio:(NSNumber *)enableAudio completion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 /// @return `nil` only when `error != nil`.

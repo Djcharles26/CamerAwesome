@@ -258,13 +258,19 @@ static id GetNullableObjectAtIndex(NSArray *array, NSInteger key) {
     name:(NSString *)name
     iso:(NSNumber *)iso
     flashAvailable:(NSNumber *)flashAvailable
-    uid:(NSString *)uid {
+    uid:(NSString *)uid
+	  minZoom:(CGFloat) minZoom
+		maxOpticalZoom:(CGFloat)maxOpticalZoom
+		maxDigitalZoom:(CGFloat)maxDigitalZoom {
   PigeonSensorTypeDevice* pigeonResult = [[PigeonSensorTypeDevice alloc] init];
   pigeonResult.sensorType = sensorType;
   pigeonResult.name = name;
   pigeonResult.iso = iso;
   pigeonResult.flashAvailable = flashAvailable;
   pigeonResult.uid = uid;
+	pigeonResult.minZoom = minZoom;
+	pigeonResult.maxOpticalZoom = maxOpticalZoom;
+	pigeonResult.maxDigitalZoom = maxDigitalZoom;
   return pigeonResult;
 }
 + (PigeonSensorTypeDevice *)fromList:(NSArray *)list {
@@ -278,6 +284,9 @@ static id GetNullableObjectAtIndex(NSArray *array, NSInteger key) {
   NSAssert(pigeonResult.flashAvailable != nil, @"");
   pigeonResult.uid = GetNullableObjectAtIndex(list, 4);
   NSAssert(pigeonResult.uid != nil, @"");
+	pigeonResult.minZoom = [GetNullableObjectAtIndex(list, 5) floatValue];
+	pigeonResult.maxOpticalZoom = [GetNullableObjectAtIndex(list, 6) floatValue];
+	pigeonResult.maxDigitalZoom = [GetNullableObjectAtIndex(list, 7) floatValue];
   return pigeonResult;
 }
 + (nullable PigeonSensorTypeDevice *)nullableFromList:(NSArray *)list {
@@ -290,6 +299,9 @@ static id GetNullableObjectAtIndex(NSArray *array, NSInteger key) {
     (self.iso ?: [NSNull null]),
     (self.flashAvailable ?: [NSNull null]),
     (self.uid ?: [NSNull null]),
+		@(self.minZoom),
+		@(self.maxOpticalZoom),
+		@(self.maxDigitalZoom)
   ];
 }
 @end
@@ -1061,40 +1073,6 @@ void CameraInterfaceSetup(id<FlutterBinaryMessenger> binaryMessenger, NSObject<C
         FlutterError *error;
         [api setCorrectionBrightness:arg_brightness error:&error];
         callback(wrapResult(nil, error));
-      }];
-    } else {
-      [channel setMessageHandler:nil];
-    }
-  }
-  {
-    FlutterBasicMessageChannel *channel =
-      [[FlutterBasicMessageChannel alloc]
-        initWithName:@"dev.flutter.pigeon.CameraInterface.getMinZoom"
-        binaryMessenger:binaryMessenger
-        codec:CameraInterfaceGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(getMinZoomWithError:)], @"CameraInterface api (%@) doesn't respond to @selector(getMinZoomWithError:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        FlutterError *error;
-        NSNumber *output = [api getMinZoomWithError:&error];
-        callback(wrapResult(output, error));
-      }];
-    } else {
-      [channel setMessageHandler:nil];
-    }
-  }
-  {
-    FlutterBasicMessageChannel *channel =
-      [[FlutterBasicMessageChannel alloc]
-        initWithName:@"dev.flutter.pigeon.CameraInterface.getMaxZoom"
-        binaryMessenger:binaryMessenger
-        codec:CameraInterfaceGetCodec()];
-    if (api) {
-      NSCAssert([api respondsToSelector:@selector(getMaxZoomWithError:)], @"CameraInterface api (%@) doesn't respond to @selector(getMaxZoomWithError:)", api);
-      [channel setMessageHandler:^(id _Nullable message, FlutterReply callback) {
-        FlutterError *error;
-        NSNumber *output = [api getMaxZoomWithError:&error];
-        callback(wrapResult(output, error));
       }];
     } else {
       [channel setMessageHandler:nil];
