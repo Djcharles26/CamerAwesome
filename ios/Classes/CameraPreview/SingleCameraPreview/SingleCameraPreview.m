@@ -6,6 +6,7 @@
 //
 
 #import "SingleCameraPreview.h"
+#import "SensorsController.h"
 
 @implementation SingleCameraPreview {
   dispatch_queue_t _dispatchQueue;
@@ -202,13 +203,6 @@
   return _currentPreviewSize;
 }
 
-// Get max zoom level
-- (CGFloat)getMaxZoom {
-  CGFloat maxZoom = _captureDevice.activeFormat.videoMaxZoomFactor;
-  // Not sure why on iPhone 14 Pro, zoom at 90 not working, so let's block to 50 which is very high
-  return maxZoom > 50.0 ? 50.0 : maxZoom;
-}
-
 /// Dispose camera inputs & outputs
 - (void)dispose {
   [self stop];
@@ -274,13 +268,14 @@
 
 /// Set zoom level
 - (void)setZoom:(float)value error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  CGFloat maxZoom = [self getMaxZoom];
-  CGFloat scaledZoom = value * (maxZoom - 1.0f) + 1.0f;
-  
   NSError *zoomError;
   if ([_captureDevice lockForConfiguration:&zoomError]) {
-    _captureDevice.videoZoomFactor = scaledZoom;
-    [_captureDevice unlockForConfiguration];
+		if (value < 1) {
+			*error = [FlutterError errorWithCode:@"ZOOM_MUST_BE_BIGGER_THAN_ONE" message:@"Zoom must be bigger or equals than 0" details:[zoomError localizedDescription]];
+		} else {
+			_captureDevice.videoZoomFactor = value;
+			[_captureDevice unlockForConfiguration];
+		}
   } else {
     *error = [FlutterError errorWithCode:@"ZOOM_NOT_SET" message:@"can't set the zoom value" details:[zoomError localizedDescription]];
   }
@@ -390,10 +385,16 @@
   
   // TODO: add dual & triple camera
   NSArray<AVCaptureDevice *> *devices = [[NSArray alloc] init];
-  AVCaptureDeviceDiscoverySession *discoverySession = [AVCaptureDeviceDiscoverySession
-                                                       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera, ]
-                                                       mediaType:AVMediaTypeVideo
-                                                       position:AVCaptureDevicePositionUnspecified];
+  AVCaptureDeviceDiscoverySession *discoverySession = [
+		AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes: @[
+		AVCaptureDeviceTypeBuiltInWideAngleCamera,  // Wide Angle (1x)
+		AVCaptureDeviceTypeBuiltInTrueDepthCamera,  // TrueDepth (frontal con Face ID)
+		AVCaptureDeviceTypeBuiltInUltraWideCamera,  // Ultra Wide (0.5x)
+		AVCaptureDeviceTypeBuiltInTelephotoCamera,
+	]
+	 mediaType:AVMediaTypeVideo
+	 position:AVCaptureDevicePositionUnspecified
+];
   devices = discoverySession.devices;
   
   NSInteger cameraType = (sensor == PigeonSensorPositionFront) ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
