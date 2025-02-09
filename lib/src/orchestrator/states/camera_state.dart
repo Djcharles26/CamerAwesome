@@ -1,8 +1,6 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:camerawesome/src/orchestrator/camera_context.dart';
-import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 
 typedef OnVideoMode = Function(VideoCameraState);
 
@@ -18,7 +16,6 @@ typedef OnAnalysisOnlyMode = Function(AnalysisCameraState);
 
 abstract class CameraState {
   // TODO Make private
-  @protected
   CameraContext cameraContext;
 
   CameraState(this.cameraContext);
@@ -42,6 +39,24 @@ abstract class CameraState {
       (AnalysisCameraState state) => onAnalysisOnlyMode?.call(state),
       CameraState() => null,
     };
+  }
+
+  static T create<T extends CameraState> (CameraContext context) {
+    if (T == PhotoCameraState) {
+      return PhotoCameraState.from(context) as T;
+    } else if (T == VideoCameraState) {
+      return PhotoCameraState.from(context) as T;
+    } else if (T == PreparingCameraState) {
+      throw TypeError();
+    } else if (T == VideoRecordingCameraState) {
+      return VideoRecordingCameraState.from(context) as T;
+    } else if (T == PreviewCameraState) {
+      return PreviewCameraState.from(context) as T;
+    } else if (T == AnalysisCameraState) {
+      return AnalysisCameraState.from(context) as T;
+    } else {
+      throw UnimplementedError();
+    }
   }
 
   /// Closes streams depending on the current state
