@@ -72,7 +72,7 @@ abstract class CameraState {
 
   /// Switch camera from [Sensors.BACK] [Sensors.front]
   /// All states can switch this
-  Future<void> switchCameraSensor({
+  Future<void> switchCameraSensorPosition({
     CameraAspectRatios? aspectRatio,
     double? zoom,
     FlashMode? flash,
@@ -95,7 +95,7 @@ abstract class CameraState {
       // switch all camera position in array by one like this:
       // old: [front, telephoto, wide]
       // new : [wide, front, telephoto]
-      final newSensorsCopy = [...previous.sensors.whereNotNull()];
+      final newSensorsCopy = [...previous.sensors.nonNulls];
       next = SensorConfig.multiple(
         sensors: newSensorsCopy
           ..insert(0, newSensorsCopy.removeAt(newSensorsCopy.length - 1)),
@@ -119,33 +119,35 @@ abstract class CameraState {
     }
   }
 
-  void setSensorType(int cameraPosition, SensorType type, String deviceId) {
+  Future<SensorConfig> setSensorType(int cameraPosition, SensorType type, String deviceId) async {
     final previous = cameraContext.sensorConfig;
     int sensorIndex = 0;
     final next = SensorConfig.multiple(
       sensors: previous.sensors
-          .map((sensor) {
-            if (sensorIndex == cameraPosition) {
-              if (sensor.type == SensorType.trueDepth) {
-                sensor.position = SensorPosition.front;
-              } else {
-                sensor.position = SensorPosition.back;
-              }
-
-              sensor.deviceId = deviceId;
-              sensor.type = type;
+        .map((sensor) {
+          if (sensorIndex == cameraPosition) {
+            if (sensor.type == SensorType.trueDepth) {
+              sensor.position = SensorPosition.front;
+            } else {
+              sensor.position = SensorPosition.back;
             }
 
-            sensorIndex++;
-            return sensor;
-          })
-          .whereNotNull()
-          .toList(),
+            sensor.deviceId = deviceId;
+            sensor.type = type;
+          }
+
+          sensorIndex++;
+          return sensor;
+        })
+        .nonNulls
+        .toList(),
       aspectRatio: previous.aspectRatio,
       flashMode: previous.flashMode,
       zoom: previous.zoom,
     );
-    cameraContext.setSensorConfig(next);
+    await cameraContext.setSensorConfig(next);
+    return next;
+    //DOUBT: What happen with zoom here?
   }
 
   // PigeonSensorType? _sensorTypeFromPigeon(SensorType type) {
@@ -190,7 +192,9 @@ abstract class CameraState {
   /// - [CaptureMode.photo]
   /// - [CaptureMode.video]
   /// - [CaptureMode.ANALYSIS]
-  void setState(CaptureMode captureMode);
+  void setState(CaptureMode captureMode) {
+    captureMode.changeState(cameraContext);
+  }
 
   SaveConfig? get saveConfig => cameraContext.saveConfig;
 
