@@ -1,194 +1,51 @@
+import 'dart:math';
+
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:camerawesome/src/utils/colors.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 
-class AwesomeZoomSelector extends StatefulWidget {
-  final CameraState state;
-
-  const AwesomeZoomSelector({
-    super.key,
-    required this.state,
-  });
-
-  @override
-  State<AwesomeZoomSelector> createState() => _AwesomeZoomSelectorState();
-}
-
-class _AwesomeZoomSelectorState extends State<AwesomeZoomSelector> {
-  double? minZoom;
-  double? maxZoom;
-
-  @override
-  void initState() {
-    super.initState();
-    initAsync();
-  }
-
-  initAsync() async {
-    minZoom = await CamerawesomePlugin.getMinZoom();
-    maxZoom = await CamerawesomePlugin.getMaxZoom();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<SensorConfig>(
-      stream: widget.state.sensorConfig$,
-      builder: (context, sensorConfigSnapshot) {
-        initAsync();
-        if (sensorConfigSnapshot.data == null ||
-            minZoom == null ||
-            maxZoom == null) {
-          return const SizedBox.shrink();
-        }
-
-        return StreamBuilder<double>(
-          stream: sensorConfigSnapshot.requireData.zoom$,
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return _ZoomIndicatorLayout(
-                zoom: snapshot.requireData,
-                min: minZoom!,
-                max: maxZoom!,
-                sensorConfig: widget.state.sensorConfig,
-              );
-            } else {
-              return const SizedBox.shrink();
-            }
-          },
-        );
-      },
-    );
-  }
-}
-
-class _ZoomIndicatorLayout extends StatelessWidget {
-  final double zoom;
-  final double min;
-  final double max;
-  final SensorConfig sensorConfig;
-
-  const _ZoomIndicatorLayout({
-    required this.zoom,
-    required this.min,
-    required this.max,
-    required this.sensorConfig,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final displayZoom = (max - min) * zoom + min;
-    if (min == 1.0) {
-      // Assume there's only one lens for zooming purpose, only display current zoom
-      return _ZoomIndicator(
-        normalValue: 0.0,
-        zoom: zoom,
-        selected: true,
-        min: min,
-        max: max,
-        sensorConfig: sensorConfig,
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Show 3 dots for zooming: min, 1.0X and max zoom. The closer one shows
-        // text, the other ones a dot.
-        _ZoomIndicator(
-          normalValue: 0.0,
-          zoom: zoom,
-          selected: displayZoom < 1.0,
-          min: min,
-          max: max,
-          sensorConfig: sensorConfig,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: _ZoomIndicator(
-            normalValue: (1 - min) / (max - min),
-            zoom: zoom,
-            selected: !(displayZoom < 1.0 || displayZoom == max),
-            min: min,
-            max: max,
-            sensorConfig: sensorConfig,
-          ),
-        ),
-        _ZoomIndicator(
-          normalValue: 1.0,
-          zoom: zoom,
-          selected: displayZoom == max,
-          min: min,
-          max: max,
-          sensorConfig: sensorConfig,
-        ),
-      ],
-    );
-  }
-}
-
+/// Visual indicator of current selected zoom
+/// - [allowDigitalZoom] If true, automatic jump between sensors will be disabled and
+/// digital zoom will be enabled
 class _ZoomIndicator extends StatelessWidget {
   final double zoom;
-  final double min;
-  final double max;
-  final double normalValue;
-  final SensorConfig sensorConfig;
+  final double displayZoom;
   final bool selected;
+
+  final void Function (double) onSelected;
+
 
   const _ZoomIndicator({
     required this.zoom,
-    required this.min,
-    required this.max,
-    required this.normalValue,
-    required this.sensorConfig,
+    required this.displayZoom,
     required this.selected,
+    required this.onSelected
   });
 
   @override
   Widget build(BuildContext context) {
-    final baseTheme = AwesomeThemeProvider.of(context).theme;
-    final baseButtonTheme = baseTheme.buttonTheme;
-    final displayZoom = (max - min) * zoom + min;
-    Widget content = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 100),
-      transitionBuilder: (child, anim) {
-        return ScaleTransition(scale: anim, child: child);
+    Widget content = AwesomeBouncingWidget(
+      key: ValueKey("zoomIndicator_${zoom}_selected"),
+      onTap: () {
+        onSelected (zoom);
       },
-      child: selected
-          ? AwesomeBouncingWidget(
-              key: ValueKey("zoomIndicator_${normalValue}_selected"),
-              onTap: () {
-                sensorConfig.setZoom(normalValue);
-              },
-              child: Container(
-                color: Colors.transparent,
-                padding: const EdgeInsets.all(0.0),
-                child: AwesomeCircleWidget(
-                  theme: baseTheme,
-                  child: Text(
-                    "${displayZoom.toStringAsFixed(1)}X",
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ),
-            )
-          : AwesomeBouncingWidget(
-              key: ValueKey("zoomIndicator_${normalValue}_unselected"),
-              onTap: () {
-                sensorConfig.setZoom(normalValue);
-              },
-              child: Container(
-                color: Colors.transparent,
-                padding: const EdgeInsets.all(16.0),
-                child: AwesomeCircleWidget(
-                  theme: baseTheme.copyWith(
-                    buttonTheme: baseButtonTheme.copyWith(
-                      backgroundColor: baseButtonTheme.foregroundColor,
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  child: const SizedBox(width: 6, height: 6),
-                ),
-              ),
-            ),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withOpacityA(0.2),
+        ),
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          "${displayZoom.toStringAsFixed(1)}${selected?"X":""}",
+          maxLines: 1,
+          style: TextStyle(
+            color: selected ? Colors.yellowAccent : Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ),
     );
 
     // Same width for each dot to keep them in their position
@@ -197,6 +54,148 @@ class _ZoomIndicator extends StatelessWidget {
       child: Center(
         child: content,
       ),
+    );
+  }
+}
+
+class AwesomeZoomSelector extends StatefulWidget {
+  final CameraState state;
+  final bool allowDigitalZoom;
+  final num? maxZoom;
+
+  /// Zoom selector widget
+  /// 
+  /// Displays current zoom.
+  const AwesomeZoomSelector({
+    super.key,
+    required this.state,
+    this.allowDigitalZoom = false,
+    this.maxZoom
+  });
+
+  @override
+  State<AwesomeZoomSelector> createState() => _AwesomeZoomSelectorState();
+}
+
+class _AwesomeZoomSelectorState extends State<AwesomeZoomSelector> {
+  num minZoom (SensorConfig sensorConfig) => sensorConfig.device.minZoom;
+  num maxDeviceZoom (SensorConfig sensorConfig) => widget.allowDigitalZoom
+    ? sensorConfig.device.maxDigitalZoom 
+    : sensorConfig.device.maxOpticalZoom;
+  
+  num maxZoom (SensorConfig sensorConfig) => widget.maxZoom == null 
+    ? maxDeviceZoom (sensorConfig)
+    : min (maxDeviceZoom (sensorConfig), maxZoom (sensorConfig));
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  // double normalizeZoom (SensorConfig config, zoom) => 
+  //   (zoom - minZoom (config)) / (maxZoom(config) - minZoom(config));
+
+  /// Show 2 dots for zooming: min, 1.0X and max zoom. The closer one shows
+  /// text, the other ones a dot.
+  Widget _layout ({
+    required double zoom, 
+    required SensorConfig sensorConfig
+  }) {
+    return StreamBuilder<SensorType>(
+      stream: sensorConfig.sensorType$,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return _ZoomIndicator(
+            zoom: zoom, 
+            displayZoom: zoom,
+            selected: true, 
+            onSelected: (_){}
+          );
+        }
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: widget.state.cameraContext.sensorTypeDevices.sorted(
+            (a,b) => a.sensorType.order.compareTo(b.sensorType.order)
+          ).where (
+            (sensor) => sensor.sensorType != SensorType.trueDepth
+          ).map<Widget>(
+            (sensorTypeDevice) {
+              bool sensorSelected = sensorTypeDevice.sensorType == snapshot.requireData;
+              return _ZoomIndicator(
+                zoom: sensorSelected 
+                  ? zoom 
+                  : sensorTypeDevice.minZoom.toDouble(), 
+                displayZoom: sensorSelected 
+                  ? (
+                    (maxZoom(sensorConfig) - minZoom(sensorConfig)) * zoom + 
+                    minZoom(sensorConfig)
+                  )
+                  : sensorTypeDevice.minZoom.toDouble(),
+                selected: sensorSelected, 
+                onSelected: (_) async {
+                  /// Each time a selector is tapped, its value will be resetted
+                  /// to zero.
+                  /// 
+                  /// If a sensor is tapped and is not selected yet, then the 
+                  /// selector will be changed
+                  if (sensorSelected) {
+                    sensorConfig.setZoom(0);
+                    sensorConfig.resetGestures ();
+                  } else {
+                    await sensorConfig.setZoom(0);
+                    SensorConfig next = await widget.state.setSensorType(
+                      0, 
+                      sensorTypeDevice.sensorType, 
+                      sensorTypeDevice.uid
+                    );
+
+                    next.resetGestures ();
+                  }
+                }
+              );
+            }
+          ).toList()
+          // [
+          //   _ZoomIndicator(
+          //     zoom: zoom,
+          //     selected: zoom <= minZoom,
+          //     onSelected: (zoom) => sensorConfig.setZoom(normalizeZoom(zoom))
+          //   ),
+          //   const SizedBox(height: 16),
+          //   _ZoomIndicator(
+          //     zoom: zoom,
+          //     selected: zoom == maxZoom,
+          //     onSelected: (zoom) => sensorConfig.setZoom(normalizeZoom(zoom)),
+          //   ),
+          // ],
+        );
+      }
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<SensorConfig>(
+      stream: widget.state.sensorConfig$,
+      builder: (context, sensorConfigSnapshot) {
+        if (sensorConfigSnapshot.data == null) {
+          return const SizedBox.shrink();
+        } else {
+          return StreamBuilder<double>(
+            stream: sensorConfigSnapshot.requireData.zoom$,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return _layout (
+                  zoom: snapshot.requireData,
+                  sensorConfig: widget.state.sensorConfig
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            },
+          );
+        }
+      },
     );
   }
 }
