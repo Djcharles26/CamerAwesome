@@ -61,6 +61,8 @@ class CameraContext {
   /// [back] sensor frequently has flash while [front] does not for instance.
   ValueStream<SensorConfig> get sensorConfig$ => sensorConfigController.stream;
 
+  Set<SensorTypeDevice> sensorTypeDevices = {};
+
   CameraContext._({
     required this.initialCaptureMode,
     required this.sensorConfigController,
@@ -93,25 +95,32 @@ class CameraContext {
     required bool enablePhysicalButton,
     List<AwesomeFilter>? availableFilters,
   }) : this._(
-          initialCaptureMode: initialCaptureMode,
-          sensorConfigController: BehaviorSubject.seeded(sensorConfig),
-          filterController: BehaviorSubject.seeded(filter),
-          enablePhysicalButton: enablePhysicalButton,
-          onPermissionsResult: onPermissionsResult,
-          saveConfig: saveConfig,
-          analysisController: onImageForAnalysis != null
-              ? AnalysisController.fromPlugin(
-                  onImageListener: onImageForAnalysis,
-                  conf: analysisConfig,
-                )
-              : null,
-          exifPreferences: exifPreferences,
-          availableFilters: availableFilters,
-        );
+    initialCaptureMode: initialCaptureMode,
+    sensorConfigController: BehaviorSubject.seeded(sensorConfig),
+    filterController: BehaviorSubject.seeded(filter),
+    enablePhysicalButton: enablePhysicalButton,
+    onPermissionsResult: onPermissionsResult,
+    saveConfig: saveConfig,
+    analysisController: onImageForAnalysis != null
+      ? AnalysisController.fromPlugin(
+          onImageListener: onImageForAnalysis,
+          conf: analysisConfig,
+        )
+      : null,
+    exifPreferences: exifPreferences,
+    availableFilters: availableFilters,
+  );
 
-  changeState(CameraState newState) async {
+  void updateSensorTypeDevices (Set<SensorTypeDevice> devices) {
+    sensorTypeDevices = devices;
+    sensorConfig.devices = sensorTypeDevices;
+  }
+
+  void changeState<T extends CameraState>() async {
     final currentZoom = state.sensorConfig.zoom;
     state.dispose();
+
+    T newState = CameraState.create<T>(this);
 
     if (state.captureMode != newState.captureMode) {
       // This should not be done multiple times for the same CaptureMode or it
@@ -141,6 +150,7 @@ class CameraContext {
   }
 
   Future<void> setSensorConfig(SensorConfig newConfig) async {
+    newConfig.devices = sensorTypeDevices;
     sensorConfigController.sink.add(newConfig);
     if (sensorConfigController.hasValue &&
         !identical(newConfig, sensorConfigController.value)) {
@@ -157,7 +167,7 @@ class CameraContext {
 
   bool get imageAnalysisEnabled => analysisController?.enabled == true;
 
-  dispose() {
+  void dispose() {
     sensorConfig.dispose();
     sensorConfigController.close();
     mediaCaptureController.close();
