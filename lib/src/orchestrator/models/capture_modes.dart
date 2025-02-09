@@ -8,15 +8,15 @@ enum CaptureMode {
   // ignore: constant_identifier_names
   analysis_only;
 
-  CameraState toCameraState(CameraContext cameraContext) {
+  void changeState(CameraContext cameraContext) {
     if (this == CaptureMode.photo) {
-      return PhotoCameraState.from(cameraContext);
+      cameraContext.changeState<PhotoCameraState>();
     } else if (this == CaptureMode.video) {
-      return VideoCameraState.from(cameraContext);
+      cameraContext.changeState<VideoCameraState>();
     } else if (this == CaptureMode.preview) {
-      return PreviewCameraState(cameraContext: cameraContext);
+      cameraContext.changeState<PreviewCameraState>();
     } else if (this == CaptureMode.analysis_only) {
-      return AnalysisCameraState(cameraContext: cameraContext);
+      cameraContext.changeState<AnalysisCameraState>();
     }
     throw "State not recognized";
   }
