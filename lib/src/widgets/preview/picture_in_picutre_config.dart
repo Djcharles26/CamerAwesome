@@ -1,4 +1,5 @@
 import 'package:camerawesome/src/orchestrator/models/sensors.dart';
+import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
 
 /// Builder used to decoarate the [preview] within it. The [preview] is the
@@ -38,7 +39,7 @@ class PictureInPictureConfig {
                     borderRadius: BorderRadius.circular(23),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withOpacityA(0.15),
                         spreadRadius: 10,
                         blurRadius: 20,
                         offset: const Offset(0, 0),

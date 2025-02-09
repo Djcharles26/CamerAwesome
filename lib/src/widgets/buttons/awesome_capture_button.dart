@@ -2,6 +2,7 @@
 
 import 'package:camerawesome/src/orchestrator/analysis/analysis_controller.dart';
 import 'package:camerawesome/src/orchestrator/states/camera_state.dart';
+import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -110,7 +111,7 @@ class CameraButtonPainter extends CustomPainter {
       ..isAntiAlias = true;
     var radius = size.width / 2;
     var center = Offset(size.width / 2, size.height / 2);
-    bgPainter.color = Colors.white.withOpacity(.5);
+    bgPainter.color = Colors.white.withOpacityA(.5);
     canvas.drawCircle(center, radius, bgPainter);
 
     bgPainter.color = Colors.white;
@@ -135,7 +136,7 @@ class VideoButtonPainter extends CustomPainter {
       ..isAntiAlias = true;
     var radius = size.width / 2;
     var center = Offset(size.width / 2, size.height / 2);
-    bgPainter.color = Colors.white.withOpacity(.5);
+    bgPainter.color = Colors.white.withOpacityA(.5);
     canvas.drawCircle(center, radius, bgPainter);
 
     if (isRecording) {

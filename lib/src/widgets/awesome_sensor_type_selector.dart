@@ -1,4 +1,5 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
 
 class AwesomeSensorTypeSelector extends StatefulWidget {
@@ -71,7 +72,7 @@ class _AwesomeSensorTypeSelectorState extends State<AwesomeSensorTypeSelector> {
           decoration: BoxDecoration(
             color: _sensorDeviceData != null &&
                     _sensorDeviceData!.availableBackSensors > 1
-                ? Colors.black.withOpacity(0.2)
+                ? Colors.black.withOpacityA(0.2)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
@@ -141,7 +142,7 @@ class _SensorTypeButton extends StatelessWidget {
           width: isSelected ? 40 : 30,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withOpacityA(0.2),
           ),
           child: Center(
             child: Text(
