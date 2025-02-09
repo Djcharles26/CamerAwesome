@@ -1,19 +1,24 @@
 // ignore_for_file: close_sinks
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:rxdart/rxdart.dart';
 
-// TODO find a way to explain that this sensorconfig is not bound anymore (user changed sensor for example)
 class SensorConfig {
   late BehaviorSubject<FlashMode> _flashModeController;
 
   late BehaviorSubject<SensorType> _sensorTypeController;
 
+  late BehaviorSubject<bool> _resetGesturesController;
+
   late Stream<FlashMode> flashMode$;
 
   late Stream<SensorType> sensorType$;
+
+  /// Stream dedicated on reset the drag gestures (zoom gestures) when a new zoom is set from selector.
+  late Stream<bool> resetGestures$;
 
   late BehaviorSubject<CameraAspectRatios> _aspectRatioController;
 
@@ -25,6 +30,13 @@ class SensorConfig {
   /// [back] or [front] camera
   final List<Sensor> sensors;
 
+  /// real Sensor type information;
+  late final Set<SensorTypeDevice> devices;
+
+  SensorTypeDevice get device => devices.firstWhere (
+    (device) => device.sensorType == _sensorTypeController.value
+  );
+  
   // /// choose your photo size from the [selectDefaultSize] method
   // late Stream<Size?> previewSize;
 
@@ -80,6 +92,9 @@ class SensorConfig {
     _zoomController = BehaviorSubject<double>.seeded(currentZoom);
     zoom$ = _zoomController.stream;
 
+    _resetGesturesController = BehaviorSubject<bool>.seeded(false);
+    resetGestures$ = _resetGesturesController.stream;
+
     _aspectRatioController = BehaviorSubject.seeded(aspectRatio);
     aspectRatio$ = _aspectRatioController.stream;
 
@@ -88,11 +103,27 @@ class SensorConfig {
         .listen((value) => CamerawesomePlugin.setBrightness(value));
   }
 
-  Future<void> setZoom(double zoom) async {
+  /// Set current [zoom]
+  /// 
+  /// Calculates the realZoom, obtaining the value from normalized zoom.
+  /// - [allowDigitalZoom] changes the current conversion, using the max digital zoom
+  /// instead of the optical zoom
+  Future<void> setZoom(double zoom, {bool allowDigitalZoom = false}) async {
     if (zoom < 0 || zoom > 1) {
       throw "Zoom value must be between 0 and 1";
     }
-    await CamerawesomePlugin.setZoom(zoom);
+
+    num minZoom = device.minZoom * 2;
+    num maxZoom = allowDigitalZoom ? device.maxDigitalZoom : device.maxOpticalZoom;
+    maxZoom *= 2;
+
+    num minRange = pow (minZoom, 2);
+    num maxRange = pow(maxZoom, 2);
+    num realMaxRange = sqrt(maxRange / minRange).ceil ();
+
+    double realZoom = (realMaxRange - 1) * zoom + 1;
+
+    await CamerawesomePlugin.setZoom(realZoom);
     if (!_zoomController.isClosed) {
       _zoomController.sink.add(zoom);
     }
@@ -100,6 +131,12 @@ class SensorConfig {
 
   /// Returns the current zoom without stream
   double get zoom => _zoomController.value;
+
+  void resetGestures () {
+    if (!_resetGesturesController.isClosed) {
+      _resetGesturesController.sink.add(true);
+    }
+  }
 
   /// Set manually the [FlashMode] between
   /// [FlashMode.none] no flash
