@@ -23,11 +23,61 @@ class PreparingCameraState extends CameraState {
   @override
   CaptureMode? get captureMode => null;
 
+  /// Obtains data from sensors and update user's current
+  /// sensor config in order to contain more data.
+  Future<void> _configureSensorDevices () async {
+    SensorDeviceData data = await CamerawesomePlugin.getSensors();
+
+    Set<SensorTypeDevice> devices = data.availableSensors.toSet();
+    // /// List all sensors and obtain its device data
+    // for (Sensor sensor in sensorConfig.sensors) {
+    //   /// If sensor position is not null, obtain all sensor device data
+    //   /// from that position
+    //   if (sensor.position == SensorPosition.front) {
+    //     devices.addAll (data.frontSensors.nonNulls);
+    //   } else if (sensor.position == SensorPosition.back) {
+    //     devices.addAll (data.backSensors.nonNulls);
+    //   } else if (sensor.deviceId != null) {
+    //     SensorTypeDevice? device = data.availableSensors.firstWhereOrNull (
+    //       (dev) => dev.uid == sensor.deviceId
+    //     );
+    //     if (device != null) {
+    //       devices.add (
+    //         device
+    //       );
+    //     }
+    //   } else if (sensor.type != null) {
+    //     SensorTypeDevice? device = data.deviceFromType(sensor.type!);
+    //     if (device != null) {
+    //       devices.add (device);
+    //     }
+    //   }
+    // }
+
+    cameraContext.updateSensorTypeDevices (devices);
+  }
+
   Future<void> start() async {
+    print ("Starting state!");
+    /// Since this is the first state on Camera Context, sensor devices must 
+    /// be configured before setting any other state
+    await _configureSensorDevices ();
+    /// Let devices are obtained and configured before initializing any mode 
     final filter = cameraContext.filterController.valueOrNull;
     if (filter != null) {
       await setFilter(filter);
     }
+    /// Initialize CameraPlugin
+    await Future.delayed(
+      const Duration(milliseconds: 500), 
+      () async {
+        await _init(
+          enableImageStream: cameraContext.imageAnalysisEnabled,
+          enablePhysicalButton: cameraContext.enablePhysicalButton,
+        );
+      }
+    );
+    
     switch (nextCaptureMode) {
       case CaptureMode.photo:
         await _startPhotoMode();
@@ -45,7 +95,7 @@ class PreparingCameraState extends CameraState {
     await cameraContext.analysisController?.setup();
     if (nextCaptureMode == CaptureMode.analysis_only) {
       // Analysis controller needs to be setup before going to AnalysisCameraState
-      cameraContext.changeState(AnalysisCameraState.from(cameraContext));
+      cameraContext.changeState<AnalysisCameraState>( );
     }
 
     if (cameraContext.enablePhysicalButton) {
@@ -59,7 +109,6 @@ class PreparingCameraState extends CameraState {
   /// subscription for physical button
   StreamSubscription? _physicalButtonStreamSub;
 
-  // FIXME: Remove enableImageStream & enablePhysicalButton options here
   Future<void> initPermissions(
     SensorConfig sensorConfig, {
     required bool enableImageStream,
@@ -132,45 +181,24 @@ class PreparingCameraState extends CameraState {
   /////////////////////////////////////
 
   Future _startVideoMode() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _init(
-      enableImageStream: cameraContext.imageAnalysisEnabled,
-      enablePhysicalButton: cameraContext.enablePhysicalButton,
-    );
-    cameraContext.changeState(VideoCameraState.from(cameraContext));
+    cameraContext.changeState<VideoCameraState>();
 
     return CamerawesomePlugin.start();
   }
 
   Future _startPhotoMode() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _init(
-      enableImageStream: cameraContext.imageAnalysisEnabled,
-      enablePhysicalButton: cameraContext.enablePhysicalButton,
-    );
-    cameraContext.changeState(PhotoCameraState.from(cameraContext));
+    cameraContext.changeState<PhotoCameraState>();
 
     return CamerawesomePlugin.start();
   }
 
   Future _startPreviewMode() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _init(
-      enableImageStream: cameraContext.imageAnalysisEnabled,
-      enablePhysicalButton: cameraContext.enablePhysicalButton,
-    );
-    cameraContext.changeState(PreviewCameraState.from(cameraContext));
+    cameraContext.changeState<PreviewCameraState>();
 
     return CamerawesomePlugin.start();
   }
 
   Future _startAnalysisMode() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _init(
-      enableImageStream: cameraContext.imageAnalysisEnabled,
-      enablePhysicalButton: cameraContext.enablePhysicalButton,
-    );
-
     // On iOS, we need to start the camera to get the first frame because there
     // is no "AnalysisMode" at all.
     if (Platform.isIOS) {
@@ -186,12 +214,12 @@ class PreparingCameraState extends CameraState {
     required bool enablePhysicalButton,
   }) async {
     initPermissions(
-      sensorConfig,
+      super.sensorConfig,
       enableImageStream: enableImageStream,
       enablePhysicalButton: enablePhysicalButton,
     );
     await CamerawesomePlugin.init(
-      sensorConfig,
+      super.sensorConfig,
       enableImageStream,
       enablePhysicalButton,
       captureMode: nextCaptureMode,
