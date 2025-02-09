@@ -62,8 +62,32 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
   double? _aspectRatioValue;
   Preview? _preview;
 
-  // TODO: fetch this value from the native side
   final int kMaximumSupportedFloatingPreview = 3;
+
+  /// Listen for changes in aspect ratio in order to refresh current view
+  void _aspectRatioListener (SensorConfig sensorConfig){
+    _aspectRatioSubscription?.cancel();
+    _aspectRatioSubscription = sensorConfig.aspectRatio$.listen((event) async {
+      final previewSize = await widget.state.previewSize(0);
+      if ((_previewSize != previewSize || _aspectRatio != event) && mounted) {
+        setState(() {
+          _aspectRatio = event;
+          switch (event) {
+            case CameraAspectRatios.ratio_16_9:
+              _aspectRatioValue = 16 / 9;
+              break;
+            case CameraAspectRatios.ratio_4_3:
+              _aspectRatioValue = 4 / 3;
+              break;
+            case CameraAspectRatios.ratio_1_1:
+              _aspectRatioValue = 1;
+              break;
+          }
+          _previewSize = previewSize;
+        });
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -82,28 +106,7 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
     // refactor this
     _sensorConfigSubscription =
         widget.state.sensorConfig$.listen((sensorConfig) {
-      _aspectRatioSubscription?.cancel();
-      _aspectRatioSubscription =
-          sensorConfig.aspectRatio$.listen((event) async {
-        final previewSize = await widget.state.previewSize(0);
-        if ((_previewSize != previewSize || _aspectRatio != event) && mounted) {
-          setState(() {
-            _aspectRatio = event;
-            switch (event) {
-              case CameraAspectRatios.ratio_16_9:
-                _aspectRatioValue = 16 / 9;
-                break;
-              case CameraAspectRatios.ratio_4_3:
-                _aspectRatioValue = 4 / 3;
-                break;
-              case CameraAspectRatios.ratio_1_1:
-                _aspectRatioValue = 1;
-                break;
-            }
-            _previewSize = previewSize;
-          });
-        }
-      });
+      _aspectRatioListener(sensorConfig);
     });
   }
 
@@ -187,6 +190,7 @@ class AwesomeCameraPreviewState extends State<AwesomeCameraPreview> {
                             : null,
                     onPreviewScale: widget.onPreviewScale,
                     initialZoom: widget.state.sensorConfig.zoom,
+                    resetGesturesStream: widget.state.sensorConfig.resetGestures$,
                     child: StreamBuilder<AwesomeFilter>(
                       //FIX performances
                       stream: widget.state.filter$,
