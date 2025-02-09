@@ -304,6 +304,9 @@ class PigeonSensorTypeDevice {
     required this.iso,
     required this.flashAvailable,
     required this.uid,
+    required this.minZoom,
+    required this.maxOpticalZoom,
+    required this.maxDigitalZoom
   });
 
   PigeonSensorType sensorType;
@@ -320,6 +323,15 @@ class PigeonSensorTypeDevice {
   /// An identifier that uniquely identifies the device.
   String uid;
 
+  /// Available min zoom factor.
+  num minZoom;
+  
+  /// Available max optical (no distorsion) zoom factor
+  num maxOpticalZoom;
+
+  /// Available max digital (distorsion) zoom factor
+  num maxDigitalZoom;
+
   Object encode() {
     return <Object?>[
       sensorType.index,
@@ -327,6 +339,9 @@ class PigeonSensorTypeDevice {
       iso,
       flashAvailable,
       uid,
+      minZoom,
+      maxOpticalZoom,
+      maxDigitalZoom,
     ];
   }
 
@@ -338,6 +353,9 @@ class PigeonSensorTypeDevice {
       iso: result[2]! as double,
       flashAvailable: result[3]! as bool,
       uid: result[4]! as String,
+      minZoom: result[5]! as num,
+      maxOpticalZoom: result[6]! as num,
+      maxDigitalZoom: result[7]! as num
     );
   }
 }
@@ -1261,58 +1279,6 @@ class CameraInterface {
       );
     } else {
       return;
-    }
-  }
-
-  Future<double> getMinZoom() async {
-    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.CameraInterface.getMinZoom', codec,
-        binaryMessenger: _binaryMessenger);
-    final List<Object?>? replyList = await channel.send(null) as List<Object?>?;
-    if (replyList == null) {
-      throw PlatformException(
-        code: 'channel-error',
-        message: 'Unable to establish connection on channel.',
-      );
-    } else if (replyList.length > 1) {
-      throw PlatformException(
-        code: replyList[0]! as String,
-        message: replyList[1] as String?,
-        details: replyList[2],
-      );
-    } else if (replyList[0] == null) {
-      throw PlatformException(
-        code: 'null-error',
-        message: 'Host platform returned null value for non-null return value.',
-      );
-    } else {
-      return (replyList[0] as double?)!;
-    }
-  }
-
-  Future<double> getMaxZoom() async {
-    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
-        'dev.flutter.pigeon.CameraInterface.getMaxZoom', codec,
-        binaryMessenger: _binaryMessenger);
-    final List<Object?>? replyList = await channel.send(null) as List<Object?>?;
-    if (replyList == null) {
-      throw PlatformException(
-        code: 'channel-error',
-        message: 'Unable to establish connection on channel.',
-      );
-    } else if (replyList.length > 1) {
-      throw PlatformException(
-        code: replyList[0]! as String,
-        message: replyList[1] as String?,
-        details: replyList[2],
-      );
-    } else if (replyList[0] == null) {
-      throw PlatformException(
-        code: 'null-error',
-        message: 'Host platform returned null value for non-null return value.',
-      );
-    } else {
-      return (replyList[0] as double?)!;
     }
   }
 
