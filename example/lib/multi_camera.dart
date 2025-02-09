@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:camera_app/utils/file_utils.dart';
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -172,7 +173,7 @@ class _CameraPageState extends State<CameraPage> {
                               });
                             },
                             child: Container(
-                              color: Colors.red.withOpacity(0.5),
+                              color: Colors.red.withOpacityA(0.5),
                               margin: const EdgeInsets.all(8.0),
                               child: Center(
                                 child: Text(

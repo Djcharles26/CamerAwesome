@@ -1,4 +1,5 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -34,9 +35,9 @@ class CameraPage extends StatelessWidget {
         previewAlignment: Alignment.topRight,
         // Buttons of CamerAwesome UI will use this theme
         theme: AwesomeTheme(
-          bottomActionsBackgroundColor: Colors.cyan.withOpacity(0.5),
+          bottomActionsBackgroundColor: Colors.cyan.withOpacityA(0.5),
           buttonTheme: AwesomeButtonTheme(
-            backgroundColor: Colors.cyan.withOpacity(0.5),
+            backgroundColor: Colors.cyan.withOpacityA(0.5),
             iconSize: 20,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.all(16),
@@ -48,7 +49,7 @@ class CameraPage extends StatelessWidget {
                   shape: const CircleBorder(),
                   child: InkWell(
                     splashColor: Colors.cyan,
-                    highlightColor: Colors.cyan.withOpacity(0.5),
+                    highlightColor: Colors.cyan.withOpacityA(0.5),
                     onTap: onTap,
                     child: child,
                   ),
@@ -107,7 +108,7 @@ class CameraPage extends StatelessWidget {
             state: state,
             scale: 1.0,
             onSwitchTap: (state) {
-              state.switchCameraSensor(
+              state.switchCameraSensorPosition(
                 aspectRatio: state.sensorConfig.aspectRatio,
               );
             },
