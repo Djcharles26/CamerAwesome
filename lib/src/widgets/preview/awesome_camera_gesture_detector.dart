@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:camerawesome/pigeon.dart';
+import 'package:camerawesome/src/widgets/preview/awesome_focus_indicator.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-
-import 'package:camerawesome/src/widgets/preview/awesome_focus_indicator.dart';
 
 Widget _awesomeFocusBuilder(Offset tapPosition) {
   return AwesomeFocusIndicator(position: tapPosition);
@@ -49,11 +48,13 @@ class AwesomeCameraGestureDetector extends StatefulWidget {
   final OnPreviewTapBuilder? onPreviewTapBuilder;
   final OnPreviewScale? onPreviewScale;
   final double initialZoom;
+  final Stream<bool> resetGesturesStream;
 
   const AwesomeCameraGestureDetector({
     super.key,
     required this.child,
     required this.onPreviewScale,
+    required this.resetGesturesStream,
     this.onPreviewTapBuilder,
     this.initialZoom = 0,
   });
@@ -73,9 +74,26 @@ class _AwesomeCameraGestureDetector
   Offset? _tapPosition;
   Timer? _timer;
 
+  StreamSubscription? _resetGesturesSubscription;
+
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _resetGesturesSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     _zoomScale = widget.initialZoom;
+
+    _resetGesturesSubscription = widget.resetGesturesStream.listen((reset) {
+      if (reset) {
+        _zoomScale = 0.0;
+        _lastScale = null;
+      }
+    });
     super.initState();
   }
 
@@ -88,6 +106,7 @@ class _AwesomeCameraGestureDetector
               GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
             () => ScaleGestureRecognizer()
               ..onStart = (_) {
+                print ("Starting gesture");
                 _lastScale = null;
               }
               ..onUpdate = (ScaleUpdateDetails details) {
@@ -143,11 +162,5 @@ class _AwesomeCameraGestureDetector
           widget.onPreviewTapBuilder!.onPreviewTap.onTapPainter!(_tapPosition!),
       ]),
     );
-  }
-
-  @override
-  dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 }
