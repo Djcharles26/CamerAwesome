@@ -11,17 +11,15 @@ import 'package:flutter/services.dart';
 
 export 'src/camera_characteristics/camera_characteristics.dart';
 export 'src/orchestrator/analysis/analysis_controller.dart';
+export 'src/orchestrator/analysis/analysis_to_image.dart';
+export 'src/orchestrator/models/analysis/analysis_canvas.dart';
+// filters
+export 'src/orchestrator/models/filters/awesome_filters.dart';
 export 'src/orchestrator/models/models.dart';
 export 'src/orchestrator/models/sensor_type.dart';
 export 'src/orchestrator/models/sensors.dart';
 export 'src/orchestrator/states/states.dart';
 export 'src/widgets/camera_awesome_builder.dart';
-export 'src/orchestrator/analysis/analysis_to_image.dart';
-export 'src/orchestrator/models/analysis/analysis_canvas.dart';
-
-// filters
-export 'src/orchestrator/models/filters/awesome_filters.dart';
-
 // built in widgets
 export 'src/widgets/widgets.dart';
 
@@ -187,21 +185,20 @@ class CamerawesomePlugin {
     required bool mirrorFrontCamera,
   }) async {
     return CameraInterface()
-        .setupCamera(
-          sensorConfig.sensors.map((e) {
-            return e.toPigeon();
-          }).toList(),
-          sensorConfig.aspectRatio.name.toUpperCase(),
-          sensorConfig.zoom,
-          mirrorFrontCamera,
-          enablePhysicalButton,
-          sensorConfig.flashMode.name.toUpperCase(),
-          captureMode.name.toUpperCase(),
-          enableImageStream,
-          exifPreferences,
-          videoOptions,
-        )
-        .then((value) => true);
+    .setupCamera(
+      sensorConfig.sensors.map((e) {
+        return e.toPigeon();
+      }).toList(),
+      sensorConfig.aspectRatio.name.toUpperCase(),
+      sensorConfig.zoom,
+      mirrorFrontCamera,
+      enablePhysicalButton,
+      sensorConfig.flashMode.name.toUpperCase(),
+      captureMode.name.toUpperCase(),
+      enableImageStream,
+      exifPreferences,
+      videoOptions,
+    ).then((value) => true);
   }
 
   static Future<List<Size>> getSizes() async {
@@ -381,16 +378,6 @@ class CamerawesomePlugin {
     return CameraInterface().setCorrection(brightness);
   }
 
-  /// returns the max zoom available on device
-  static Future<double?> getMaxZoom() {
-    return CameraInterface().getMaxZoom();
-  }
-
-  /// returns the min zoom available on device
-  static Future<double?> getMinZoom() {
-    return CameraInterface().getMinZoom();
-  }
-
   static Future<bool> isMultiCamSupported() {
     return CameraInterface().isMultiCamSupported();
   }
@@ -422,6 +409,9 @@ class CamerawesomePlugin {
               iso: data.iso,
               name: data.name,
               uid: data.uid,
+              minZoom: 0,
+              maxOpticalZoom: 1,
+              maxDigitalZoom: 1,
               sensorType: SensorType.values.firstWhere(
                 (element) => element.name == data.sensorType.name,
               ),
@@ -438,6 +428,9 @@ class CamerawesomePlugin {
               sensorType: SensorType.values.firstWhere(
                 (element) => element.name == data.sensorType.name,
               ),
+              minZoom: data.minZoom,
+              maxOpticalZoom: data.maxOpticalZoom,
+              maxDigitalZoom: data.maxDigitalZoom
             ),
           )
           .toList();
