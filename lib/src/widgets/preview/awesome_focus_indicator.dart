@@ -13,8 +13,8 @@ class AwesomeFocusIndicator extends StatelessWidget {
       child: TweenAnimationBuilder<double>(
         key: ValueKey(position),
         tween: Tween<double>(
-          begin: 80,
-          end: 50,
+          begin: 200,
+          end: 180,
         ),
         duration: const Duration(milliseconds: 2000),
         curve: Curves.fastLinearToSlowEaseIn,
