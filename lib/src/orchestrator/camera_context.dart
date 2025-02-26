@@ -227,6 +227,6 @@ class CameraContext {
 
   Future<int?> previewTextureId(int cameraPosition) {
     return CamerawesomePlugin.getPreviewTexture(cameraPosition)
-        .then(((value) => value?.toInt()));
+      .then(((value) => value?.toInt()));
   }
 }
