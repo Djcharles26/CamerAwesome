@@ -6,6 +6,16 @@ enum CameraAspectRatios {
   ratio_1_1; // only for iOS
 
   CameraAspectRatios get defaultRatio => CameraAspectRatios.ratio_4_3;
+  double get ratio {
+    switch (this) {
+      case CameraAspectRatios.ratio_16_9:
+        return 16/9;
+      case CameraAspectRatios.ratio_4_3:
+        return 4/3;
+      case CameraAspectRatios.ratio_1_1:
+        return 1;
+    }
+  }
 }
 
 enum SensorPosition {
