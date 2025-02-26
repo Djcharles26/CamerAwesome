@@ -29,36 +29,11 @@ class PreparingCameraState extends CameraState {
     SensorDeviceData data = await CamerawesomePlugin.getSensors();
 
     Set<SensorTypeDevice> devices = data.availableSensors.toSet();
-    // /// List all sensors and obtain its device data
-    // for (Sensor sensor in sensorConfig.sensors) {
-    //   /// If sensor position is not null, obtain all sensor device data
-    //   /// from that position
-    //   if (sensor.position == SensorPosition.front) {
-    //     devices.addAll (data.frontSensors.nonNulls);
-    //   } else if (sensor.position == SensorPosition.back) {
-    //     devices.addAll (data.backSensors.nonNulls);
-    //   } else if (sensor.deviceId != null) {
-    //     SensorTypeDevice? device = data.availableSensors.firstWhereOrNull (
-    //       (dev) => dev.uid == sensor.deviceId
-    //     );
-    //     if (device != null) {
-    //       devices.add (
-    //         device
-    //       );
-    //     }
-    //   } else if (sensor.type != null) {
-    //     SensorTypeDevice? device = data.deviceFromType(sensor.type!);
-    //     if (device != null) {
-    //       devices.add (device);
-    //     }
-    //   }
-    // }
 
     cameraContext.updateSensorTypeDevices (devices);
   }
 
   Future<void> start() async {
-    print ("Starting state!");
     /// Since this is the first state on Camera Context, sensor devices must 
     /// be configured before setting any other state
     await _configureSensorDevices ();
