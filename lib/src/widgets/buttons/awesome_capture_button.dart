@@ -107,14 +107,18 @@ class CameraButtonPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     var bgPainter = Paint()
-      ..style = PaintingStyle.fill
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
       ..isAntiAlias = true;
     var radius = size.width / 2;
     var center = Offset(size.width / 2, size.height / 2);
     bgPainter.color = Colors.white.withOpacityA(.5);
     canvas.drawCircle(center, radius, bgPainter);
 
-    bgPainter.color = Colors.white;
+    bgPainter 
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
     canvas.drawCircle(center, radius - 8, bgPainter);
   }
 
