@@ -15,7 +15,6 @@ typedef OnPreviewMode = Function(PreviewCameraState);
 typedef OnAnalysisOnlyMode = Function(AnalysisCameraState);
 
 abstract class CameraState {
-  // TODO Make private
   CameraContext cameraContext;
 
   CameraState(this.cameraContext);
@@ -86,7 +85,6 @@ abstract class CameraState {
         sensor: previous.sensors.first.position == SensorPosition.back
             ? Sensor.position(SensorPosition.front)
             : Sensor.position(SensorPosition.back),
-        // TODO Initial values are not set in native when set like this
         aspectRatio: aspectRatio ?? CameraAspectRatios.ratio_4_3,
         zoom: zoom ?? 0.0,
         flashMode: flash ?? FlashMode.none,
@@ -99,7 +97,6 @@ abstract class CameraState {
       next = SensorConfig.multiple(
         sensors: newSensorsCopy
           ..insert(0, newSensorsCopy.removeAt(newSensorsCopy.length - 1)),
-        // TODO Initial values are not set in native when set like this
         aspectRatio: aspectRatio ?? CameraAspectRatios.ratio_4_3,
         zoom: zoom ?? 0.0,
         flashMode: flash ?? FlashMode.none,
@@ -107,7 +104,6 @@ abstract class CameraState {
     }
     await cameraContext.setSensorConfig(next);
 
-    // TODO Once initial sensorConfig is correctly handled, we can remove below lines
     if (aspectRatio != null) {
       await next.setAspectRatio(aspectRatio);
     }
@@ -119,7 +115,9 @@ abstract class CameraState {
     }
   }
 
-  Future<SensorConfig> setSensorType(int cameraPosition, SensorType type, String deviceId) async {
+  Future<SensorConfig> setSensorType(
+    int cameraPosition, SensorType type, String deviceId
+  ) async {
     final previous = cameraContext.sensorConfig;
     int sensorIndex = 0;
     final next = SensorConfig.multiple(
