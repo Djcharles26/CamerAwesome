@@ -235,10 +235,12 @@ data class ExifPreferences (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class PigeonSensor (
-  val position: PigeonSensorPosition,
-  val type: PigeonSensorType,
-  val deviceId: String? = null
-
+    val position: PigeonSensorPosition,
+    val type: PigeonSensorType,
+    val deviceId: String? = null,
+    val minZoom: Double,
+    val maxDigitalZoom: Double = 1.0,
+    val maxOpticalZoom: Double = 1.0
 ) {
   companion object {
     @Suppress("UNCHECKED_CAST")
@@ -246,14 +248,27 @@ data class PigeonSensor (
       val position = PigeonSensorPosition.ofRaw(list[0] as Int)!!
       val type = PigeonSensorType.ofRaw(list[1] as Int)!!
       val deviceId = list[2] as String?
-      return PigeonSensor(position, type, deviceId)
+        val minZoom = list[3] as Double
+        val maxDigitalZoom = list[4] as Double
+        val maxOpticalZoom = list[5] as Double
+      return PigeonSensor(
+          position,
+          type,
+          deviceId,
+          minZoom,
+          maxDigitalZoom,
+          maxOpticalZoom
+      )
     }
   }
   fun toList(): List<Any?> {
     return listOf<Any?>(
-      position.raw,
-      type.raw,
-      deviceId,
+        position.raw,
+        type.raw,
+        deviceId,
+        minZoom,
+        maxDigitalZoom,
+        maxOpticalZoom
     )
   }
 }

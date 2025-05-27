@@ -403,7 +403,7 @@ class CamerawesomePlugin {
       final backSensors = await CameraInterface().getBackSensors();
 
       final frontSensorsData = frontSensors
-          .map(
+          .map( 
             (data) => SensorTypeDevice(
               flashAvailable: data!.flashAvailable,
               iso: data.iso,
