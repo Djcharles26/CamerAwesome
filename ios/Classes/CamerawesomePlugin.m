@@ -7,14 +7,12 @@
 #import "AspectRatioUtils.h"
 #import "CaptureModeUtils.h"
 #import "FlashModeUtils.h"
-#import "AnalysisController.h"
 
 FlutterEventSink orientationEventSink;
 FlutterEventSink videoRecordingEventSink;
-FlutterEventSink imageStreamEventSink;
 FlutterEventSink physicalButtonEventSink;
 
-@interface CamerawesomePlugin () <CameraInterface, AnalysisImageUtils>
+@interface CamerawesomePlugin () <CameraInterface>
 @property(readonly, nonatomic) NSObject<FlutterTextureRegistry> *textureRegistry;
 @property NSMutableArray<NSNumber *> *texturesIds;
 @property SingleCameraPreview *camera;
@@ -28,7 +26,6 @@ FlutterEventSink physicalButtonEventSink;
 
 @implementation CamerawesomePlugin {
   dispatch_queue_t _dispatchQueue;
-  dispatch_queue_t _dispatchQueueAnalysis;
 }
 
 - (instancetype)init:(NSObject<FlutterPluginRegistrar>*)registrar {
@@ -40,9 +37,6 @@ FlutterEventSink physicalButtonEventSink;
     _dispatchQueue = dispatch_queue_create("camerawesome.dispatchqueue", NULL);
   }
   
-  if (_dispatchQueueAnalysis == nil) {
-    _dispatchQueueAnalysis = dispatch_queue_create("camerawesome.dispatchqueue.analysis", NULL);
-  }
   
   return self;
 }
@@ -51,16 +45,12 @@ FlutterEventSink physicalButtonEventSink;
   CamerawesomePlugin *instance = [[CamerawesomePlugin alloc] init:registrar];
   FlutterEventChannel *orientationChannel = [FlutterEventChannel eventChannelWithName:@"camerawesome/orientation"
                                                                       binaryMessenger:[registrar messenger]];
-  FlutterEventChannel *imageStreamChannel = [FlutterEventChannel eventChannelWithName:@"camerawesome/images"
-                                                                      binaryMessenger:[registrar messenger]];
   FlutterEventChannel *physicalButtonChannel = [FlutterEventChannel eventChannelWithName:@"camerawesome/physical_button"
                                                                          binaryMessenger:[registrar messenger]];
   [orientationChannel setStreamHandler:instance];
-  [imageStreamChannel setStreamHandler:instance];
   [physicalButtonChannel setStreamHandler:instance];
   
   CameraInterfaceSetup(registrar.messenger, instance);
-  AnalysisImageUtilsSetup(registrar.messenger, instance);
 }
 
 #pragma mark - Camera engine methods
@@ -125,7 +115,6 @@ FlutterEventSink physicalButtonEventSink;
     self.camera = [[SingleCameraPreview alloc] initWithCameraSensor:firstSensor.position
                                                        videoOptions:videoOptions != nil ? videoOptions.ios : nil
                                                    recordingQuality:videoOptions != nil ? videoOptions.quality : VideoRecordingQualityHighest
-                                                       streamImages:[enableImageStream boolValue]
                                                   mirrorFrontCamera:[mirrorFrontCamera boolValue]
                                                enablePhysicalButton:[enablePhysicalButton boolValue]
                                                     aspectRatioMode:aspectRatioMode
@@ -218,12 +207,6 @@ FlutterEventSink physicalButtonEventSink;
       [self.camera setOrientationEventSink:orientationEventSink];
     }
     
-  } else if ([arguments  isEqual: @"imagesChannel"]) {
-    imageStreamEventSink = eventSink;
-    
-    if (self.camera != nil) {
-      [self.camera setImageStreamEvent:imageStreamEventSink];
-    }
   } else if ([arguments  isEqual: @"physicalButtonChannel"]) {
     physicalButtonEventSink = eventSink;
     
@@ -241,12 +224,6 @@ FlutterEventSink physicalButtonEventSink;
     
     if (self.camera != nil && self.camera.motionController != nil) {
       [self.camera setOrientationEventSink:orientationEventSink];
-    }
-  } else if ([arguments  isEqual: @"imagesChannel"]) {
-    imageStreamEventSink = nil;
-    
-    if (self.camera != nil) {
-      [self.camera setImageStreamEvent:imageStreamEventSink];
     }
   } else if ([arguments  isEqual: @"physicalButtonChannel"]) {
     physicalButtonEventSink = nil;
@@ -618,74 +595,11 @@ FlutterEventSink physicalButtonEventSink;
 
 #pragma mark - Image stream methods
 
-- (void)receivedImageFromStreamWithError:(FlutterError *_Nullable *_Nonnull)error {
-  if (self.camera == nil && self.multiCamera == nil) {
-    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
-    return;
-  }
-  
-  if (self.camera == nil) {
-    *error = [FlutterError errorWithCode:@"MULTI_CAMERA_UNSUPPORTED" message:@"this feature is currently not supported with multi camera feature" details:nil];
-    return;
-  }
-  
-  [self.camera receivedImageFromStream];
-}
-
-- (void)setupImageAnalysisStreamFormat:(nonnull NSString *)format width:(nonnull NSNumber *)width maxFramesPerSecond:(nullable NSNumber *)maxFramesPerSecond autoStart:(nonnull NSNumber *)autoStart error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  if (self.camera == nil && self.multiCamera == nil) {
-    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
-    return;
-  }
-  
-  if (self.camera == nil) {
-    *error = [FlutterError errorWithCode:@"MULTI_CAMERA_UNSUPPORTED" message:@"this feature is currently not supported with multi camera feature" details:nil];
-    return;
-  }
-  
-  [self.camera.imageStreamController setStreamImages:autoStart];
-  
-  // Force a frame rate to improve performance
-  [self.camera.imageStreamController setMaxFramesPerSecond:[maxFramesPerSecond floatValue]];
-}
-
-- (void)startAnalysisWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  if (self.camera == nil && self.multiCamera == nil) {
-    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
-    return;
-  }
-  
-  if (self.camera == nil) {
-    *error = [FlutterError errorWithCode:@"MULTI_CAMERA_UNSUPPORTED" message:@"this feature is currently not supported with multi camera feature" details:nil];
-    return;
-  }
-  
-  if (self.camera.videoController.isRecording) {
-    *error = [FlutterError errorWithCode:@"VIDEO_ERROR" message:@"can't start image stream because video is recording" details:@""];
-    return;
-  }
-  
-  [self.camera.imageStreamController setStreamImages:true];
-}
 
 
-- (void)stopAnalysisWithError:(FlutterError * _Nullable __autoreleasing * _Nonnull)error {
-  if (self.camera == nil && self.multiCamera == nil) {
-    *error = [FlutterError errorWithCode:@"CAMERA_MUST_BE_INIT" message:@"init must be call before start" details:nil];
-    return;
-  }
-  
-  if (self.camera == nil) {
-    *error = [FlutterError errorWithCode:@"MULTI_CAMERA_UNSUPPORTED" message:@"this feature is currently not supported with multi camera feature" details:nil];
-    return;
-  }
-  
-  [self.camera.imageStreamController setStreamImages:false];
-}
 
-- (void)isVideoRecordingAndImageAnalysisSupportedSensor:(PigeonSensorPosition)sensor completion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion {
-  completion(@(NO), nil);
-}
+
+
 
 #pragma mark - Sensors methods
 
@@ -727,22 +641,8 @@ FlutterEventSink physicalButtonEventSink;
   return [NSNumber numberWithBool: [MultiCameraController isMultiCamSupported]];
 }
 
-- (void)bgra8888toJpegBgra8888image:(nonnull AnalysisImageWrapper *)bgra8888image jpegQuality:(nonnull NSNumber *)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
-  dispatch_async(_dispatchQueueAnalysis, ^{
-    [AnalysisController bgra8888toJpegBgra8888image:bgra8888image jpegQuality:jpegQuality completion:completion];
-  });
-}
 
-- (void)nv21toJpegNv21Image:(nonnull AnalysisImageWrapper *)nv21Image jpegQuality:(nonnull NSNumber *)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
-  [AnalysisController nv21toJpegNv21Image:nv21Image jpegQuality:jpegQuality completion:completion];
-}
 
-- (void)yuv420toJpegYuvImage:(nonnull AnalysisImageWrapper *)yuvImage jpegQuality:(nonnull NSNumber *)jpegQuality completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
-  [AnalysisController yuv420toJpegYuvImage:yuvImage jpegQuality:jpegQuality completion:completion];
-}
 
-- (void)yuv420toNv21YuvImage:(nonnull AnalysisImageWrapper *)yuvImage completion:(nonnull void (^)(AnalysisImageWrapper * _Nullable, FlutterError * _Nullable))completion {
-  [AnalysisController yuv420toNv21YuvImage:yuvImage completion:completion];
-}
 
 @end

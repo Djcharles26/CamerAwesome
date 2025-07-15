@@ -13,7 +13,6 @@
 #import "CameraDeviceInfo.h"
 #import "CameraPictureController.h"
 #import "MotionController.h"
-#import "ImageStreamController.h"
 #import "PhysicalButtonController.h"
 #import "AspectRatio.h"
 #import "LocationController.h"

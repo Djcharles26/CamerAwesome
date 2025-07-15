@@ -11,8 +11,7 @@
 typedef enum {
   Photo,
   Video,
-  Preview,
-  AnalysisOnly
+  Preview
 } CaptureModes;
 
 #endif /* CaptureModes_h */

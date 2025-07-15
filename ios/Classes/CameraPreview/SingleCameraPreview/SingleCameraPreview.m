@@ -15,7 +15,6 @@
 - (instancetype)initWithCameraSensor:(PigeonSensorPosition)sensor
                         videoOptions:(nullable CupertinoVideoOptions *)videoOptions
                     recordingQuality:(VideoRecordingQuality)recordingQuality
-                        streamImages:(BOOL)streamImages
                    mirrorFrontCamera:(BOOL)mirrorFrontCamera
                 enablePhysicalButton:(BOOL)enablePhysicalButton
                      aspectRatioMode:(AspectRatio)aspectRatioMode
@@ -61,7 +60,6 @@
   
   // Controllers init
   _videoController = [[VideoController alloc] init];
-  _imageStreamController = [[ImageStreamController alloc] initWithStreamImages:streamImages];
   _motionController = [[MotionController alloc] init];
   _locationController = [[LocationController alloc] init];
   _physicalButtonController = [[PhysicalButtonController alloc] init];
@@ -81,12 +79,6 @@
   _aspectRatio = ratio;
 }
 
-/// Set image stream Flutter sink
-- (void)setImageStreamEvent:(FlutterEventSink)imageStreamEventSink {
-  if (_imageStreamController != nil) {
-    [_imageStreamController setImageStreamEventSink:imageStreamEventSink];
-  }
-}
 
 /// Set orientation stream Flutter sink
 - (void)setOrientationEventSink:(FlutterEventSink)orientationEventSink {
@@ -176,10 +168,6 @@
 /// Set camera preview size
 - (void)setCameraPresset:(CGSize)currentPreviewSize {
   CGSize preview = currentPreviewSize;
-  if (_imageStreamController.streamImages) {
-    // force preview to HD for image stream
-    preview = CGSizeMake(720, 1280);
-  }
   
   NSString *presetSelected;
   if (!CGSizeEqualToSize(CGSizeZero, preview)) {
@@ -373,9 +361,6 @@
   }
 }
 
-- (void)receivedImageFromStream {
-  [self.imageStreamController receivedImageFromStream];
-}
 
 /// Get the first available camera on device (front or rear)
 - (NSString *)selectAvailableCamera:(PigeonSensorPosition)sensor {
@@ -465,10 +450,6 @@
 # pragma mark - Camera video
 /// Record video into the given path
 - (void)recordVideoAtPath:(NSString *)path completion:(nonnull void (^)(FlutterError * _Nullable))completion {
-  if (_imageStreamController.streamImages) {
-    completion([FlutterError errorWithCode:@"VIDEO_ERROR" message:@"can't record video when image stream is enabled" details:@""]);
-    return;
-  }
   
   if (!_videoController.isRecording) {
     [_videoController recordVideoAtPath:path captureDevice:_captureDevice orientation:_deviceOrientation audioSetupCallback:^{
@@ -578,10 +559,6 @@
     }
   }
   
-  // Process image stream controller
-  if (_imageStreamController.streamImages && !_videoController.isRecording) {
-    [_imageStreamController captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection orientation:_motionController.deviceOrientation];
-  }
   
   // Process video recording
   if (_videoController.isRecording) {

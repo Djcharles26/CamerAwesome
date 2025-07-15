@@ -15,7 +15,6 @@
 #import "MotionController.h"
 #import "LocationController.h"
 #import "VideoController.h"
-#import "ImageStreamController.h"
 #import "CameraSensor.h"
 #import "CaptureModes.h"
 #import "CameraFlash.h"
@@ -25,7 +24,6 @@
 #import "AspectRatio.h"
 #import "CameraSensorType.h"
 #import "PhysicalButtonController.h"
-#import "InputAnalysisImageFormat.h"
 #import "CameraPreviewTexture.h"
 #import "MultiCameraPreview.h"
 
@@ -58,7 +56,6 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 @property(readonly, nonatomic) bool saveGPSLocation;
 @property(readonly, nonatomic) bool mirrorFrontCamera;
 @property(readonly, nonatomic) CGSize currentPreviewSize;
-@property(readonly, nonatomic) ImageStreamController *imageStreamController;
 @property(readonly, nonatomic) MotionController *motionController;
 @property(readonly, nonatomic) LocationController *locationController;
 @property(readonly, nonatomic) VideoController *videoController;
@@ -69,14 +66,12 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (instancetype)initWithCameraSensor:(PigeonSensorPosition)sensor
                         videoOptions:(nullable CupertinoVideoOptions *)videoOptions
                     recordingQuality:(VideoRecordingQuality)recordingQuality
-                        streamImages:(BOOL)streamImages
                    mirrorFrontCamera:(BOOL)mirrorFrontCamera
                 enablePhysicalButton:(BOOL)enablePhysicalButton
                      aspectRatioMode:(AspectRatio)aspectRatioMode
                          captureMode:(CaptureModes)captureMode
                           completion:(nonnull void (^)(NSNumber * _Nullable, FlutterError * _Nullable))completion
                        dispatchQueue:(dispatch_queue_t)dispatchQueue;
-- (void)setImageStreamEvent:(FlutterEventSink)imageStreamEventSink;
 - (void)setOrientationEventSink:(FlutterEventSink)orientationEventSink;
 - (void)setPhysicalButtonEventSink:(FlutterEventSink)physicalButtonEventSink;
 - (void)setPreviewSize:(CGSize)previewSize error:(FlutterError * _Nullable __autoreleasing * _Nonnull)error;
@@ -86,7 +81,6 @@ AVCaptureAudioDataOutputSampleBufferDelegate>
 - (void)setRecordingAudioMode:(bool)enableAudio completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 - (void)pauseVideoRecording;
 - (void)resumeVideoRecording;
-- (void)receivedImageFromStream;
 - (void)setAspectRatio:(AspectRatio)ratio;
 - (void)setExifPreferencesGPSLocation:(bool)gpsLocation completion:(void(^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 - (void)refresh;
