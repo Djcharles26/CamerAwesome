@@ -10,9 +10,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 
 export 'src/camera_characteristics/camera_characteristics.dart';
-export 'src/orchestrator/analysis/analysis_controller.dart';
-export 'src/orchestrator/analysis/analysis_to_image.dart';
-export 'src/orchestrator/models/analysis/analysis_canvas.dart';
 // filters
 export 'src/orchestrator/models/filters/awesome_filters.dart';
 export 'src/orchestrator/models/models.dart';
@@ -34,8 +31,6 @@ class CamerawesomePlugin {
   static const EventChannel _permissionsChannel =
       EventChannel('camerawesome/permissions');
 
-  static const EventChannel _imagesChannel =
-      EventChannel('camerawesome/images');
 
   static const EventChannel _physicalButtonChannel =
       EventChannel('camerawesome/physical_button');
@@ -46,7 +41,6 @@ class CamerawesomePlugin {
 
   static Stream<bool>? _permissionsStream;
 
-  static Stream<Map<String, dynamic>>? _imagesStream;
 
   static CameraRunningState currentState = CameraRunningState.stopped;
 
@@ -145,39 +139,10 @@ class CamerawesomePlugin {
     return _permissionsStream;
   }
 
-  static Future<void> setupAnalysis({
-    int width = 0,
-    double? maxFramesPerSecond,
-    required InputAnalysisImageFormat format,
-    required bool autoStart,
-  }) async {
-    return CameraInterface().setupImageAnalysisStream(
-      format.name,
-      width,
-      maxFramesPerSecond,
-      autoStart,
-    );
-  }
 
-  static Stream<Map<String, dynamic>>? listenCameraImages() {
-    _imagesStream ??=
-        _imagesChannel.receiveBroadcastStream('imagesChannel').transform(
-      StreamTransformer<dynamic, Map<String, dynamic>>.fromHandlers(
-        handleData: (data, sink) {
-          sink.add(Map<String, dynamic>.from(data));
-        },
-      ),
-    );
-    return _imagesStream;
-  }
-
-  static Future receivedImageFromStream() {
-    return CameraInterface().receivedImageFromStream();
-  }
 
   static Future<bool?> init(
     SensorConfig sensorConfig,
-    bool enableImageStream,
     bool enablePhysicalButton, {
     CaptureMode captureMode = CaptureMode.photo,
     required ExifPreferences exifPreferences,
@@ -195,7 +160,7 @@ class CamerawesomePlugin {
       enablePhysicalButton,
       sensorConfig.flashMode.name.toUpperCase(),
       captureMode.name.toUpperCase(),
-      enableImageStream,
+      false, // enableImageStream
       exifPreferences,
       videoOptions,
     ).then((value) => true);
@@ -282,15 +247,15 @@ class CamerawesomePlugin {
     }
   }
 
-  static pauseVideoRecording() {
-    CameraInterface().pauseVideoRecording();
+  static Future<void> pauseVideoRecording() {
+    return CameraInterface().pauseVideoRecording();
   }
 
-  static resumeVideoRecording() {
+  static Future<void> resumeVideoRecording() {
     return CameraInterface().resumeVideoRecording();
   }
 
-  static stopRecordingVideo() {
+  static Future<bool> stopRecordingVideo() {
     return CameraInterface().stopRecordingVideo();
   }
 
@@ -299,7 +264,7 @@ class CamerawesomePlugin {
     return CameraInterface().setFlashMode(flashMode.name.toUpperCase());
   }
 
-  static startAutoFocus() {
+  static Future<void> startAutoFocus() {
     return CameraInterface().handleAutoFocus();
   }
 
