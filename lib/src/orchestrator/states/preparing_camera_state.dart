@@ -47,7 +47,7 @@ class PreparingCameraState extends CameraState {
       const Duration(milliseconds: 500), 
       () async {
         await _init(
-          enableImageStream: cameraContext.imageAnalysisEnabled,
+          enableImageStream: false,
           enablePhysicalButton: cameraContext.enablePhysicalButton,
         );
       }
@@ -63,14 +63,6 @@ class PreparingCameraState extends CameraState {
       case CaptureMode.preview:
         await _startPreviewMode();
         break;
-      case CaptureMode.analysis_only:
-        await _startAnalysisMode();
-        break;
-    }
-    await cameraContext.analysisController?.setup();
-    if (nextCaptureMode == CaptureMode.analysis_only) {
-      // Analysis controller needs to be setup before going to AnalysisCameraState
-      cameraContext.changeState<AnalysisCameraState>( );
     }
 
     if (cameraContext.enablePhysicalButton) {
@@ -173,13 +165,6 @@ class PreparingCameraState extends CameraState {
     return CamerawesomePlugin.start();
   }
 
-  Future _startAnalysisMode() async {
-    // On iOS, we need to start the camera to get the first frame because there
-    // is no "AnalysisMode" at all.
-    if (Platform.isIOS) {
-      return CamerawesomePlugin.start();
-    }
-  }
 
   bool _isReady = false;
 
@@ -195,7 +180,6 @@ class PreparingCameraState extends CameraState {
     );
     await CamerawesomePlugin.init(
       super.sensorConfig,
-      enableImageStream,
       enablePhysicalButton,
       captureMode: nextCaptureMode,
       exifPreferences: cameraContext.exifPreferences,

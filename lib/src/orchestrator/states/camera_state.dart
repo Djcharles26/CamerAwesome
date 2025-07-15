@@ -12,7 +12,6 @@ typedef OnVideoRecordingMode = Function(VideoRecordingCameraState);
 
 typedef OnPreviewMode = Function(PreviewCameraState);
 
-typedef OnAnalysisOnlyMode = Function(AnalysisCameraState);
 
 abstract class CameraState {
   CameraContext cameraContext;
@@ -21,13 +20,12 @@ abstract class CameraState {
 
   abstract final CaptureMode? captureMode;
 
-  when({
+  dynamic when({
     OnVideoMode? onVideoMode,
     OnPhotoMode? onPhotoMode,
     OnPreparingCamera? onPreparingCamera,
     OnVideoRecordingMode? onVideoRecordingMode,
     OnPreviewMode? onPreviewMode,
-    OnAnalysisOnlyMode? onAnalysisOnlyMode,
   }) {
     return switch (this) {
       (VideoCameraState state) => onVideoMode?.call(state),
@@ -35,7 +33,6 @@ abstract class CameraState {
       (PreparingCameraState state) => onPreparingCamera?.call(state),
       (VideoRecordingCameraState state) => onVideoRecordingMode?.call(state),
       (PreviewCameraState state) => onPreviewMode?.call(state),
-      (AnalysisCameraState state) => onAnalysisOnlyMode?.call(state),
       CameraState() => null,
     };
   }
@@ -51,8 +48,6 @@ abstract class CameraState {
       return VideoRecordingCameraState.from(context) as T;
     } else if (T == PreviewCameraState) {
       return PreviewCameraState.from(context) as T;
-    } else if (T == AnalysisCameraState) {
-      return AnalysisCameraState.from(context) as T;
     } else {
       throw UnimplementedError();
     }
@@ -208,6 +203,4 @@ abstract class CameraState {
     return cameraContext.previewTextureId(cameraPosition);
   }
 
-  AnalysisController? get analysisController =>
-      cameraContext.analysisController;
 }

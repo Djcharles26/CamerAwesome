@@ -119,7 +119,7 @@ class VideoRecordingCameraState extends CameraState {
     // Nothing to do
   }
 
-  focus() {
+  void focus() {
     cameraContext.focus();
   }
 

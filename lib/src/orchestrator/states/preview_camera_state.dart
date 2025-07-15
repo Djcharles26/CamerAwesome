@@ -26,7 +26,7 @@ class PreviewCameraState extends CameraState {
     super.setState(captureMode);
   }
 
-  focus() {
+  void focus() {
     cameraContext.focus();
   }
 
