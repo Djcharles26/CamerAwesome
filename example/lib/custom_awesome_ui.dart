@@ -1,4 +1,5 @@
 import 'package:camerawesome/camerawesome_plugin.dart';
+// ignore: implementation_imports
 import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
 
