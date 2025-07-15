@@ -13,8 +13,19 @@ import android.util.Log
 import android.util.Rational
 import android.util.Size
 import androidx.camera.camera2.Camera2Config
+import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
-import androidx.camera.core.*
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraControl
+import androidx.camera.core.CameraInfoUnavailableException
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.MeteringPointFactory
+import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.VideoRecordEvent
@@ -29,6 +40,7 @@ import com.apparence.camerawesome.buttons.PlayerService
 import com.apparence.camerawesome.models.FlashMode
 import com.apparence.camerawesome.sensors.SensorOrientationListener
 import com.apparence.camerawesome.utils.isMultiCamSupported
+import com.apparence.camerawesome.utils.getSensorType
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -51,7 +63,7 @@ import kotlin.math.roundToInt
 
 
 enum class CaptureModes {
-    PHOTO, VIDEO, PREVIEW, ANALYSIS_ONLY,
+    PHOTO, VIDEO, PREVIEW,
 }
 
 class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
@@ -59,7 +71,6 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
     private var binding: FlutterPluginBinding? = null
     private var textureRegistry: TextureRegistry? = null
     private var activity: Activity? = null
-    private lateinit var imageStreamChannel: EventChannel
     private lateinit var orientationStreamChannel: EventChannel
     private var orientationStreamListener: OrientationStreamListener? = null
     private val sensorOrientationListener: SensorOrientationListener = SensorOrientationListener()
@@ -126,7 +137,6 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         enablePhysicalButton: Boolean,
         flashMode: String,
         captureMode: String,
-        enableImageStream: Boolean,
         exifPreferences: ExifPreferences,
         videoOptions: VideoOptions?,
         callback: (Result<Boolean>) -> Unit
@@ -154,7 +164,6 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
             sensors = sensors,
             mirrorFrontCamera = mirrorFrontCamera,
             currentCaptureMode = mode,
-            enableImageStream = enableImageStream,
             videoOptions = videoOptions?.android,
             videoRecordingQuality = videoOptions?.quality,
             onStreamReady = { state -> state.updateLifecycle(activity!!) }).apply {
@@ -165,17 +174,14 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         this.exifPreferences = exifPreferences
         orientationStreamListener =
             OrientationStreamListener(activity!!, listOf(sensorOrientationListener, cameraState))
-        imageStreamChannel.setStreamHandler(cameraState)
-        if (mode != CaptureModes.ANALYSIS_ONLY) {
-            cameraState.updateLifecycle(activity!!)
-            // Zoom should be set after updateLifeCycle
-            if (zoom > 0) {
-                // TODO Find a better way to set initial zoom than using a postDelayed
-                Handler(Looper.getMainLooper()).postDelayed({
-                    (cameraState.concurrentCamera?.cameras?.firstOrNull()
-                        ?: cameraState.previewCamera)?.cameraControl?.setLinearZoom(zoom.toFloat())
-                }, 200)
-            }
+        cameraState.updateLifecycle(activity!!)
+        // Zoom should be set after updateLifeCycle
+        if (zoom > 0) {
+            // TODO Find a better way to set initial zoom than using a postDelayed
+            Handler(Looper.getMainLooper()).postDelayed({
+                (cameraState.concurrentCamera?.cameras?.firstOrNull()
+                    ?: cameraState.previewCamera)?.cameraControl?.setLinearZoom(zoom.toFloat())
+            }, 200)
         }
 
         callback(Result.success(true))
@@ -185,30 +191,6 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         throw Exception("Not implemented on Android")
     }
 
-    override fun setupImageAnalysisStream(
-        format: String, width: Long, maxFramesPerSecond: Double?, autoStart: Boolean
-    ) {
-        cameraState.apply {
-            try {
-                imageAnalysisBuilder = ImageAnalysisBuilder.configure(
-                    aspectRatio ?: AspectRatio.RATIO_4_3,
-                    when (format.uppercase()) {
-                        "YUV_420" -> OutputImageFormat.YUV_420_888
-                        "NV21" -> OutputImageFormat.NV21
-                        "JPEG" -> OutputImageFormat.JPEG
-                        else -> OutputImageFormat.NV21
-                    },
-                    executor(activity!!), width,
-                    maxFramesPerSecond = maxFramesPerSecond,
-                )
-                enableImageStream = autoStart
-                updateLifecycle(activity!!)
-            } catch (e: Exception) {
-                Log.e(CamerawesomePlugin.TAG, "error while enable image analysis", e)
-            }
-        }
-
-    }
 
     override fun setExifPreferences(
         exifPreferences: ExifPreferences, callback: (Result<Boolean>) -> Unit
@@ -244,42 +226,8 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         colorMatrix = matrix
     }
 
-    override fun isVideoRecordingAndImageAnalysisSupported(
-        sensor: PigeonSensorPosition, callback: (Result<Boolean>) -> Unit
-    ) {
-        val cameraSelector =
-            if (sensor == PigeonSensorPosition.BACK) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val cameraProvider = ProcessCameraProvider.getInstance(
-                activity!!
-            ).get()
-            callback(
-                Result.success(
-                    CameraCapabilities.getCameraLevel(
-                        cameraSelector, cameraProvider
-                    ) == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
-                )
-            )
-        } else {
-            callback(Result.success(false))
-        }
 
-    }
-
-    override fun startAnalysis() {
-        cameraState.apply {
-            enableImageStream = true
-            updateLifecycle(activity!!)
-        }
-    }
-
-    override fun stopAnalysis() {
-        cameraState.apply {
-            enableImageStream = false
-            updateLifecycle(activity!!)
-        }
-    }
 
     override fun requestPermissions(
         saveGpsLocation: Boolean, callback: (Result<List<String>>) -> Unit
@@ -547,12 +495,83 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         }
     }
 
+    @SuppressLint("RestrictedApi")
+    @ExperimentalCamera2Interop
     override fun getFrontSensors(): List<PigeonSensorTypeDevice> {
-        TODO("Not yet implemented")
+        return getSensorsForPosition(CameraSelector.LENS_FACING_FRONT)
     }
 
+    @SuppressLint("RestrictedApi")
+    @ExperimentalCamera2Interop
     override fun getBackSensors(): List<PigeonSensorTypeDevice> {
-        TODO("Not yet implemented")
+        return getSensorsForPosition(CameraSelector.LENS_FACING_BACK)
+    }
+
+    @SuppressLint("RestrictedApi")
+    @ExperimentalCamera2Interop
+    private fun getSensorsForPosition(lensFacing: Int): List<PigeonSensorTypeDevice> {
+        val cameraProvider = getCameraProvider()
+        val sensorTypeDevices = mutableListOf<PigeonSensorTypeDevice>()
+        
+        try {
+            val cameraInfos = cameraProvider.availableCameraInfos
+            
+            for (cameraInfo in cameraInfos) {
+                val camera2Info = Camera2CameraInfo.from(cameraInfo)
+                val facing = camera2Info.getCameraCharacteristic(CameraCharacteristics.LENS_FACING)
+                
+                if (facing == lensFacing) {
+                    val sensorType = camera2Info.getSensorType()
+                    val cameraId = camera2Info.cameraId
+                    val characteristics = camera2Info.cameraCharacteristicsCompat
+                    
+                    // Get zoom capabilities
+                    val maxZoom = cameraInfo.zoomState.value?.maxZoomRatio ?: 1f
+                    val minZoom = cameraInfo.zoomState.value?.minZoomRatio ?: 1f
+                    
+                    // Get camera name
+                    val physicalCameraIds = characteristics.physicalCameraIds
+                    val cameraName = when (sensorType) {
+                        PigeonSensorType.ULTRAWIDEANGLE -> "Ultra Wide Camera"
+                        PigeonSensorType.WIDEANGLE -> "Wide Camera"
+                        PigeonSensorType.TELEPHOTO -> "Telephoto Camera"
+                        else -> "Camera $cameraId"
+                    }
+                    
+                    // Check flash availability
+                    val hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) ?: false
+                    
+                    // Get ISO
+                    val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                    val currentIso = isoRange?.lower?.toDouble() ?: 100.0
+                    
+                    val sensorDevice = PigeonSensorTypeDevice(
+                        sensorType = sensorType,
+                        name = cameraName,
+                        iso = currentIso,
+                        flashAvailable = hasFlash,
+                        uid = cameraId,
+                        minZoom = minZoom.toDouble(),
+                        maxOpticalZoom = maxZoom.toDouble(),
+                        maxDigitalZoom = maxZoom.toDouble()
+                    )
+                    
+                    sensorTypeDevices.add(sensorDevice)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("CameraAwesomeX", "Error getting sensors: ${e.message}")
+        }
+        
+        // Sort sensors by type order (ultra-wide, wide, telephoto)
+        return sensorTypeDevices.sortedBy { device ->
+            when (device.sensorType) {
+                PigeonSensorType.ULTRAWIDEANGLE -> 0
+                PigeonSensorType.WIDEANGLE -> 1
+                PigeonSensorType.TELEPHOTO -> 2
+                else -> 3
+            }
+        }
     }
 
     override fun pauseVideoRecording() {
@@ -563,9 +582,6 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         cameraState.recordings?.forEach { it.resume() }
     }
 
-    override fun receivedImageFromStream() {
-        cameraState.imageAnalysisBuilder?.lastFrameAnalysisFinished()
-    }
 
 
     override fun start(): Boolean {
@@ -804,10 +820,8 @@ class CameraAwesomeX : CameraInterface, FlutterPlugin, ActivityAware {
         this.binding = binding
         textureRegistry = binding.textureRegistry
         CameraInterface.setUp(binding.binaryMessenger, this)
-        AnalysisImageUtils.setUp(binding.binaryMessenger, AnalysisImageConverter())
         orientationStreamChannel = EventChannel(binding.binaryMessenger, "camerawesome/orientation")
         orientationStreamChannel.setStreamHandler(sensorOrientationListener)
-        imageStreamChannel = EventChannel(binding.binaryMessenger, "camerawesome/images")
         EventChannel(binding.binaryMessenger, "camerawesome/permissions").setStreamHandler(
             cameraPermissions
         )
