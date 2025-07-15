@@ -10,7 +10,21 @@ import android.view.Surface
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat
 import androidx.camera.camera2.internal.compat.quirk.CamcorderProfileResolutionQuirk
 import androidx.camera.camera2.interop.Camera2CameraInfo
-import androidx.camera.core.*
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import androidx.camera.core.CameraFilter
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraControl
+import androidx.camera.core.CameraInfo
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ConcurrentCamera
+import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.MirrorMode
+import androidx.camera.core.Preview
+import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.ViewPort
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.core.content.ContextCompat
@@ -19,6 +33,8 @@ import com.apparence.camerawesome.CamerawesomePlugin
 import com.apparence.camerawesome.models.FlashMode
 import com.apparence.camerawesome.sensors.SensorOrientation
 import com.apparence.camerawesome.utils.isMultiCamSupported
+import com.apparence.camerawesome.utils.getSensorType
+import com.apparence.camerawesome.utils.getPigeonPosition
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
 import java.util.concurrent.Executor
@@ -38,7 +54,6 @@ data class CameraXState(
     private var currentCaptureMode: CaptureModes,
     var enableAudioRecording: Boolean = true,
     var recordings: MutableList<Recording>? = null,
-    var enableImageStream: Boolean = false,
     var photoSize: Size? = null,
     var previewSize: Size? = null,
     var aspectRatio: Int? = null,
@@ -51,8 +66,6 @@ data class CameraXState(
     val videoOptions: AndroidVideoOptions?,
 ) : EventChannel.StreamHandler, SensorOrientation {
 
-    var imageAnalysisBuilder: ImageAnalysisBuilder? = null
-    private var imageAnalysis: ImageAnalysis? = null
 
     private val mainCameraInfos: CameraInfo
         @SuppressLint("RestrictedApi") get() {
@@ -87,6 +100,51 @@ data class CameraXState(
     }
 
     @SuppressLint("RestrictedApi", "UnsafeOptInUsageError")
+    @ExperimentalCamera2Interop
+    private fun createCameraSelector(sensor: PigeonSensor, cameraProvider: ProcessCameraProvider): CameraSelector {
+        return CameraSelector.Builder()
+            .requireLensFacing(if (sensor.position == PigeonSensorPosition.FRONT) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK)
+            .addCameraFilter(CameraFilter { cameraInfos ->
+                val list = mutableListOf<CameraInfo>()
+                
+                // First try to find exact match by device ID
+                if (sensor.deviceId != null) {
+                    cameraInfos.forEach { cameraInfo ->
+                        val camera2Info = Camera2CameraInfo.from(cameraInfo)
+                        if (camera2Info.cameraId == sensor.deviceId) {
+                            list.add(cameraInfo)
+                            return@CameraFilter list
+                        }
+                    }
+                }
+                
+                // Then try to match by sensor type and position
+                cameraInfos.forEach { cameraInfo ->
+                    Camera2CameraInfo.from(cameraInfo).let { camera2Info ->
+                        if (camera2Info.getPigeonPosition() == sensor.position && 
+                            (camera2Info.getSensorType() == sensor.type || sensor.type == PigeonSensorType.UNKNOWN)) {
+                            list.add(cameraInfo)
+                        }
+                    }
+                }
+                
+                // If no camera found, only filter based on the sensor position
+                if (list.isEmpty()) {
+                    cameraInfos.forEach { cameraInfo ->
+                        Camera2CameraInfo.from(cameraInfo).let { camera2Info ->
+                            if (camera2Info.getPigeonPosition() == sensor.position) {
+                                list.add(cameraInfo)
+                            }
+                        }
+                    }
+                }
+                return@CameraFilter list
+            })
+            .build()
+    }
+
+    @SuppressLint("RestrictedApi", "UnsafeOptInUsageError")
+    @ExperimentalCamera2Interop
     fun updateLifecycle(activity: Activity) {
         previews = mutableListOf()
         imageCaptures.clear()
@@ -97,33 +155,7 @@ data class CameraXState(
             for ((index, sensor) in sensors.withIndex()) {
                 val useCaseGroupBuilder = UseCaseGroup.Builder()
 
-                val cameraSelector =
-                    if (isFirst) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
-                // TODO Find cameraSelectors based on the sensor and the cameraProvider.availableConcurrentCameraInfos
-//                val cameraSelector = CameraSelector.Builder()
-//                    .requireLensFacing(if (sensor.position == PigeonSensorPosition.FRONT) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK)
-//                    .addCameraFilter(CameraFilter { cameraInfos ->
-//                        val list = mutableListOf<CameraInfo>()
-//                        cameraInfos.forEach { cameraInfo ->
-//                            Camera2CameraInfo.from(cameraInfo).let {
-//                                if (it.getPigeonPosition() == sensor.position && (it.getSensorType() == sensor.type || it.getSensorType() == PigeonSensorType.UNKNOWN)) {
-//                                    list.add(cameraInfo)
-//                                }
-//                            }
-//                        }
-//                        if (list.isEmpty()) {
-//                            // If no camera found, only filter based on the sensor position and ignore sensor type
-//                            cameraInfos.forEach { cameraInfo ->
-//                                Camera2CameraInfo.from(cameraInfo).let {
-//                                    if (it.getPigeonPosition() == sensor.position) {
-//                                        list.add(cameraInfo)
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        return@CameraFilter list
-//                    })
-//                    .build()
+                val cameraSelector = createCameraSelector(sensor, cameraProvider)
 
 
                 val preview = if (aspectRatio != null) {
@@ -163,12 +195,6 @@ data class CameraXState(
                     useCaseGroupBuilder.addUseCase(videoCapture)
                     videoCaptures[sensor] = videoCapture
                 }
-                if (isFirst && enableImageStream && imageAnalysisBuilder != null) {
-                    imageAnalysis = imageAnalysisBuilder!!.build()
-                    useCaseGroupBuilder.addUseCase(imageAnalysis!!)
-                } else {
-                    imageAnalysis = null
-                }
 
                 isFirst = false
                 useCaseGroupBuilder.setViewPort(
@@ -192,24 +218,21 @@ data class CameraXState(
         } else {
             val useCaseGroupBuilder = UseCaseGroup.Builder()
             // Handle single camera
-            val cameraSelector =
-                if (sensors.first().position == PigeonSensorPosition.FRONT) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+            val cameraSelector = createCameraSelector(sensors.first(), cameraProvider)
             // Preview
-            if (currentCaptureMode != CaptureModes.ANALYSIS_ONLY) {
-                previews!!.add(
-                    if (aspectRatio != null) {
-                        Preview.Builder().setTargetAspectRatio(aspectRatio!!)
-                            .setCameraSelector(cameraSelector).build()
-                    } else {
-                        Preview.Builder().setCameraSelector(cameraSelector).build()
-                    }
-                )
+            previews!!.add(
+                if (aspectRatio != null) {
+                    Preview.Builder().setTargetAspectRatio(aspectRatio!!)
+                        .setCameraSelector(cameraSelector).build()
+                } else {
+                    Preview.Builder().setCameraSelector(cameraSelector).build()
+                }
+            )
 
-                previews!!.first().setSurfaceProvider(
-                    surfaceProvider(executor(activity), sensors.first().deviceId ?: "0")
-                )
-                useCaseGroupBuilder.addUseCase(previews!!.first())
-            }
+            previews!!.first().setSurfaceProvider(
+                surfaceProvider(executor(activity), sensors.first().deviceId ?: "0")
+            )
+            useCaseGroupBuilder.addUseCase(previews!!.first())
 
             if (currentCaptureMode == CaptureModes.PHOTO) {
                 val imageCapture = ImageCapture.Builder().setCameraSelector(cameraSelector)
@@ -236,25 +259,7 @@ data class CameraXState(
             }
 
 
-            val addAnalysisUseCase = enableImageStream && imageAnalysisBuilder != null
-            val cameraLevel = CameraCapabilities.getCameraLevel(
-                cameraSelector, cameraProvider
-            )
             cameraProvider.unbindAll()
-            if (addAnalysisUseCase) {
-                if (currentCaptureMode == CaptureModes.VIDEO && cameraLevel < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) {
-                    Log.w(
-                        CamerawesomePlugin.TAG,
-                        "Trying to bind too many use cases for this device (level $cameraLevel), ignoring image analysis"
-                    )
-                } else {
-                    imageAnalysis = imageAnalysisBuilder!!.build()
-                    useCaseGroupBuilder.addUseCase(imageAnalysis!!)
-
-                }
-            } else {
-                imageAnalysis = null
-            }
             // TODO Orientation might be wrong, to be verified
             useCaseGroupBuilder.setViewPort(ViewPort.Builder(rational, Surface.ROTATION_0).build())
                 .build()
@@ -340,7 +345,7 @@ data class CameraXState(
             }
 
             else -> {
-                // Preview and analysis only modes
+                // Preview mode
 
                 // Release video related stuff
                 videoCaptures.clear()
@@ -402,36 +407,15 @@ data class CameraXState(
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-        val previous = imageAnalysisBuilder?.previewStreamSink
-        imageAnalysisBuilder?.previewStreamSink = events
-        if (previous == null && events != null) {
-            onStreamReady(this)
-        }
+        // Image stream not supported anymore
     }
 
     override fun onCancel(arguments: Any?) {
-        this.imageAnalysisBuilder?.previewStreamSink?.endOfStream()
-        this.imageAnalysisBuilder?.previewStreamSink = null
+        // Image stream not supported anymore
     }
 
     override fun onOrientationChanged(orientation: Int) {
-        imageAnalysis?.targetRotation = when (orientation) {
-            in 225 until 315 -> {
-                Surface.ROTATION_90
-            }
-
-            in 135 until 225 -> {
-                Surface.ROTATION_180
-            }
-
-            in 45 until 135 -> {
-                Surface.ROTATION_270
-            }
-
-            else -> {
-                Surface.ROTATION_0
-            }
-        }
+        // Image analysis not supported anymore
     }
 
     fun updateAspectRatio(newAspectRatio: String) {
