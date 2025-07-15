@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
 import 'package:camerawesome/src/orchestrator/camera_context.dart';
+import 'package:camerawesome/src/widgets/preview/awesome_preview_fit.dart';
 import 'package:flutter/material.dart' hide Preview;
 import 'package:flutter/services.dart';
 
@@ -37,12 +38,6 @@ typedef OnPermissionsResult = void Function(bool result);
 /// Listener for picture or video capture event
 typedef OnMediaCaptureEvent = void Function(MediaCapture mediaCapture);
 
-/// Analysis image stream listener
-/// The Preview object will help you to convert a point from the preview to the
-/// to your screen
-typedef OnImageForAnalysis = Future Function(
-  AnalysisImage image,
-);
 
 /// This is the entry point of the CameraAwesome plugin
 /// You can either
@@ -75,12 +70,7 @@ class CameraAwesomeBuilder extends StatefulWidget {
   /// UI Builder
   final CameraLayoutBuilder builder;
 
-  final OnImageForAnalysis? onImageForAnalysis;
-
-  /// only for Android
-  final AnalysisConfig? imageAnalysisConfig;
-
-  /// Useful for drawing things based on AI Analysis above the CameraPreview for instance
+  /// Useful for drawing custom decorations above the CameraPreview
   final CameraLayoutBuilder? previewDecoratorBuilder;
 
   final OnPreviewTap Function(CameraState)? onPreviewTapBuilder;
@@ -100,8 +90,7 @@ class CameraAwesomeBuilder extends StatefulWidget {
   /// See also [previewPadding].
   final Alignment previewAlignment;
 
-  /// Set it to true to show a Preview of the camera, false if you only want to
-  /// do image analysis
+  /// Set it to true to show a Preview of the camera
   final bool showPreview;
 
   final PictureInPictureConfigBuilder? pictureInPictureConfigBuilder;
@@ -127,8 +116,6 @@ class CameraAwesomeBuilder extends StatefulWidget {
     required this.builder,
     required this.previewFit,
     required this.defaultFilter,
-    this.onImageForAnalysis,
-    this.imageAnalysisConfig,
     this.onPreviewTapBuilder,
     this.onPreviewScaleBuilder,
     this.previewDecoratorBuilder,
@@ -159,17 +146,12 @@ class CameraAwesomeBuilder extends StatefulWidget {
   /// how the built-in UI is done. Check [AwesomeCameraLayout] for more details.
   /// - build your UI entirely thanks to the [custom] constructor.
   ///
-  /// If you want to do image analysis (for AI for instance), you can set the
-  /// [imageAnaysisConfig] and listen to the stream of images with
-  /// [onImageForAnalysis].
   CameraAwesomeBuilder.awesome(
       {SensorConfig? sensorConfig,
       bool enablePhysicalButton = false,
       Widget? progressIndicator,
       required SaveConfig saveConfig,
       Function(MediaCapture)? onMediaTap,
-      OnImageForAnalysis? onImageForAnalysis,
-      AnalysisConfig? imageAnalysisConfig,
       OnPreviewTap Function(CameraState)? onPreviewTapBuilder,
       OnPreviewScale Function(CameraState)? onPreviewScaleBuilder,
       CameraPreviewFit? previewFit,
@@ -202,8 +184,6 @@ class CameraAwesomeBuilder extends StatefulWidget {
           },
           saveConfig: saveConfig,
           onMediaTap: onMediaTap,
-          onImageForAnalysis: onImageForAnalysis,
-          imageAnalysisConfig: imageAnalysisConfig,
           onPreviewTapBuilder: onPreviewTapBuilder,
           onPreviewScaleBuilder: onPreviewScaleBuilder,
           previewFit: previewFit ?? CameraPreviewFit.cover,
@@ -228,8 +208,6 @@ class CameraAwesomeBuilder extends StatefulWidget {
     required CameraLayoutBuilder builder,
     required SaveConfig saveConfig,
     AwesomeFilter? filter,
-    OnImageForAnalysis? onImageForAnalysis,
-    AnalysisConfig? imageAnalysisConfig,
     OnPreviewTap Function(CameraState)? onPreviewTapBuilder,
     OnPreviewScale Function(CameraState)? onPreviewScaleBuilder,
     CameraPreviewFit? previewFit,
@@ -250,8 +228,6 @@ class CameraAwesomeBuilder extends StatefulWidget {
           saveConfig: saveConfig,
           onMediaTap: null,
           defaultFilter: filter,
-          onImageForAnalysis: onImageForAnalysis,
-          imageAnalysisConfig: imageAnalysisConfig,
           onPreviewTapBuilder: onPreviewTapBuilder,
           onPreviewScaleBuilder: onPreviewScaleBuilder,
           previewFit: previewFit ?? CameraPreviewFit.cover,
@@ -265,14 +241,11 @@ class CameraAwesomeBuilder extends StatefulWidget {
         );
 
   /// Use this constructor when you don't want to take pictures or record videos.
-  /// You can still do image analysis.
   CameraAwesomeBuilder.previewOnly({
     SensorConfig? sensorConfig,
     Widget? progressIndicator,
     required CameraLayoutBuilder builder,
     AwesomeFilter? filter,
-    OnImageForAnalysis? onImageForAnalysis,
-    AnalysisConfig? imageAnalysisConfig,
     OnPreviewTap Function(CameraState)? onPreviewTapBuilder,
     OnPreviewScale Function(CameraState)? onPreviewScaleBuilder,
     CameraPreviewFit? previewFit,
@@ -288,8 +261,6 @@ class CameraAwesomeBuilder extends StatefulWidget {
           saveConfig: null,
           onMediaTap: null,
           defaultFilter: filter,
-          onImageForAnalysis: onImageForAnalysis,
-          imageAnalysisConfig: imageAnalysisConfig,
           onPreviewTapBuilder: onPreviewTapBuilder,
           onPreviewScaleBuilder: onPreviewScaleBuilder,
           previewFit: previewFit ?? CameraPreviewFit.cover,
@@ -300,41 +271,6 @@ class CameraAwesomeBuilder extends StatefulWidget {
           pictureInPictureConfigBuilder: pictureInPictureConfigBuilder,
         );
 
-  /// Use this constructor when you only want to do image analysis.
-  ///
-  /// E.g.: QR code detection, barcode detection, face detection, etc.
-  ///
-  /// You can't take pictures or record videos and the preview won't be displayed.
-  /// You may still show the image from the analysis by converting it to JPEG
-  /// and  displaying that JPEG image.
-  CameraAwesomeBuilder.analysisOnly({
-    SensorConfig? sensorConfig,
-    CameraAspectRatios aspectRatio = CameraAspectRatios.ratio_4_3,
-    Widget? progressIndicator,
-    required CameraLayoutBuilder builder,
-    required OnImageForAnalysis onImageForAnalysis,
-    AnalysisConfig? imageAnalysisConfig,
-  }) : this._(
-          sensorConfig: sensorConfig ??
-              SensorConfig.single(sensor: Sensor.position(SensorPosition.back)),
-          enablePhysicalButton: false,
-          progressIndicator: progressIndicator,
-          builder: builder,
-          saveConfig: null,
-          onMediaTap: null,
-          defaultFilter: null,
-          onImageForAnalysis: onImageForAnalysis,
-          imageAnalysisConfig: imageAnalysisConfig,
-          onPreviewTapBuilder: null,
-          onPreviewScaleBuilder: null,
-          previewFit: CameraPreviewFit.cover,
-          previewDecoratorBuilder: null,
-          theme: AwesomeTheme(),
-          previewPadding: EdgeInsets.zero,
-          previewAlignment: Alignment.center,
-          showPreview: false,
-          pictureInPictureConfigBuilder: null,
-        );
 
   @override
   State<StatefulWidget> createState() {
@@ -398,14 +334,8 @@ class _CameraWidgetBuilder extends State<CameraAwesomeBuilder>
       enablePhysicalButton: widget.enablePhysicalButton,
       filter: widget.defaultFilter ?? AwesomeFilter.None,
       initialCaptureMode: 
-        widget.saveConfig?.initialCaptureMode ?? (
-          widget.showPreview
-            ? CaptureMode.preview
-            : CaptureMode.analysis_only
-        ),
+        widget.saveConfig?.initialCaptureMode ?? CaptureMode.preview,
       saveConfig: widget.saveConfig,
-      onImageForAnalysis: widget.onImageForAnalysis,
-      analysisConfig: widget.imageAnalysisConfig,
       exifPreferences: widget.saveConfig?.exifPreferences ?? ExifPreferences(
         saveGPSLocation: false
       ),

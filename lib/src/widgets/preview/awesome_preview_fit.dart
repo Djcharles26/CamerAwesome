@@ -2,9 +2,40 @@ import 'dart:math';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/pigeon.dart';
+import 'package:camerawesome/src/orchestrator/adapters/pigeon_sensor_adapter.dart';
 import 'package:flutter/material.dart' hide Preview;
 
 final previewWidgetKey = GlobalKey();
+
+class Preview {
+  final Size nativePreviewSize;
+  final Size previewSize;
+  final Offset offset;
+  final double scale;
+  final PigeonSensor sensor;
+
+  Preview({
+    required this.nativePreviewSize,
+    required this.previewSize,
+    required this.offset,
+    required this.scale,
+    required this.sensor,
+  });
+
+  static Preview hidden() {
+    return Preview(
+      nativePreviewSize: Size.zero,
+      previewSize: Size.zero,
+      offset: Offset.zero,
+      scale: 0.0,
+      sensor: PigeonSensor(
+        position: PigeonSensorPosition.front,
+        type: PigeonSensorType.wideAngle,
+        deviceId: "hidden",
+      ),
+    );
+  }
+}
 
 typedef OnPreviewCalculated = void Function(Preview preview);
 
@@ -90,7 +121,7 @@ class _AnimatedPreviewFitState extends State<AnimatedPreviewFit> {
           previewSize: sizeCalculator!.maxSize,
           offset: sizeCalculator!.offset,
           scale: sizeCalculator!.zoom,
-          sensor: widget.sensor,
+          sensor: widget.sensor.toPigeon(),
         ),
       );
     }

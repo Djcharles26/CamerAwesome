@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:camerawesome/pigeon.dart';
 import 'package:camerawesome/src/widgets/preview/awesome_focus_indicator.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -106,7 +107,9 @@ class _AwesomeCameraGestureDetector
               GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
             () => ScaleGestureRecognizer()
               ..onStart = (_) {
-                print ("Starting gesture");
+                if (kDebugMode) {
+                  print ("Starting gesture");
+                }
                 _lastScale = null;
               }
               ..onUpdate = (ScaleUpdateDetails details) {

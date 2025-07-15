@@ -1,6 +1,5 @@
 // ignore_for_file: library_private_types_in_public_api
 
-import 'package:camerawesome/src/orchestrator/analysis/analysis_controller.dart';
 import 'package:camerawesome/src/orchestrator/states/camera_state.dart';
 import 'package:camerawesome/src/utils/colors.dart';
 import 'package:flutter/material.dart';
@@ -46,9 +45,6 @@ class _AwesomeCaptureButtonState extends State<AwesomeCaptureButton>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.state is AnalysisController) {
-      return Container();
-    }
     _scale = 1 - _animationController.value;
 
     return GestureDetector(
@@ -75,12 +71,12 @@ class _AwesomeCaptureButtonState extends State<AwesomeCaptureButton>
     );
   }
 
-  _onTapDown(TapDownDetails details) {
+  void _onTapDown(TapDownDetails details) {
     HapticFeedback.selectionClick();
     _animationController.forward();
   }
 
-  _onTapUp(TapUpDetails details) {
+  void _onTapUp(TapUpDetails details) {
     Future.delayed(_duration, () {
       _animationController.reverse();
     });
@@ -88,11 +84,11 @@ class _AwesomeCaptureButtonState extends State<AwesomeCaptureButton>
     onTap.call();
   }
 
-  _onTapCancel() {
+  void _onTapCancel() {
     _animationController.reverse();
   }
 
-  get onTap => () {
+  Null Function() get onTap => () {
         widget.state.when(
           onPhotoMode: (photoState) => photoState.takePhoto(),
           onVideoMode: (videoState) => videoState.startRecording(),
