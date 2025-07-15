@@ -198,7 +198,7 @@ class SensorConfig {
   CameraAspectRatios get aspectRatio => _aspectRatioController.value;
 
   /// set brightness correction manually range [0,1] (optionnal)
-  setBrightness(double brightness) {
+  void setBrightness(double brightness) {
     if (brightness < 0 || brightness > 1) {
       throw "Brightness value must be between 0 and 1";
     }

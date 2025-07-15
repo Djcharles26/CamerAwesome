@@ -30,14 +30,10 @@ class CameraContext {
   final CaptureMode initialCaptureMode;
 
   /// Configuration holding path builders for taking pictures and recording
-  /// videos. May be null if in [CaptureMode.analysisOnly] or [CaptureMode.preview].
+  /// videos. May be null if in [CaptureMode.preview].
   final SaveConfig? saveConfig;
 
   final bool enablePhysicalButton;
-
-  /// allows to create dynamic analysis using the current preview
-  /// Image analysis controller. You may use it to start or stop image analysis.
-  final AnalysisController? analysisController;
 
   /// List of available filters
   final List<AwesomeFilter>? availableFilters;
@@ -66,7 +62,6 @@ class CameraContext {
   CameraContext._({
     required this.initialCaptureMode,
     required this.sensorConfigController,
-    required this.analysisController,
     required this.saveConfig,
     required this.exifPreferences,
     required this.filterController,
@@ -88,8 +83,6 @@ class CameraContext {
     required CaptureMode initialCaptureMode,
     OnPermissionsResult? onPermissionsResult,
     required SaveConfig? saveConfig,
-    OnImageForAnalysis? onImageForAnalysis,
-    AnalysisConfig? analysisConfig,
     required ExifPreferences exifPreferences,
     required AwesomeFilter filter,
     required bool enablePhysicalButton,
@@ -101,12 +94,6 @@ class CameraContext {
     enablePhysicalButton: enablePhysicalButton,
     onPermissionsResult: onPermissionsResult,
     saveConfig: saveConfig,
-    analysisController: onImageForAnalysis != null
-      ? AnalysisController.fromPlugin(
-          onImageListener: onImageForAnalysis,
-          conf: analysisConfig,
-        )
-      : null,
     exifPreferences: exifPreferences,
     availableFilters: availableFilters,
   );
@@ -165,14 +152,11 @@ class CameraContext {
     return sensorConfigController.value;
   }
 
-  bool get imageAnalysisEnabled => analysisController?.enabled == true;
-
   void dispose() {
     sensorConfig.dispose();
     sensorConfigController.close();
     mediaCaptureController.close();
     stateController.close();
-    analysisController?.stop();
     state.dispose();
     CamerawesomePlugin.stop();
   }
